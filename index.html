@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buddy Mini Transformer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+<style>
+  :root{
+    --bg:#ffffff; --canvas-subtle:#f6f8fa; --text:#1f2328; --muted:#656d76;
+    --border:#d0d7de; --border-muted:#eaeef2; --accent:#0969da; --hover:#f3f4f6;
+    --sidebar:#ffffff; --radius:8px;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:var(--font);color:var(--text);background:var(--bg);
+    -webkit-font-smoothing:antialiased;display:flex;height:100vh;height:100dvh;overflow:hidden;font-size:14px;line-height:1.6}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{width:272px;min-width:272px;background:var(--sidebar);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;padding:16px 12px}
+  .brand{display:flex;align-items:center;gap:9px;padding:8px 8px 16px}
+  .brand .logo{width:26px;height:26px;border-radius:6px;background:var(--text);color:#fff;
+    display:flex;align-items:center;justify-content:center}
+  .brand .logo svg{width:16px;height:16px}
+  .brand .name{font-weight:600;font-size:15px}
+  .nav-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.04em;padding:8px 10px 6px}
+  .nav-item{display:flex;align-items:flex-start;gap:10px;padding:9px 10px;border-radius:var(--radius);
+    cursor:pointer;color:var(--text);border:1px solid transparent;margin-bottom:2px;transition:background .12s}
+  .nav-item:hover{background:var(--hover)}
+  .nav-item.active{background:var(--canvas-subtle);border-color:var(--border-muted)}
+  .nav-item.active .ni-title{color:var(--accent)}
+  .nav-item .ni-icon{width:18px;height:18px;color:var(--muted);flex-shrink:0;margin-top:2px}
+  .nav-item.active .ni-icon{color:var(--accent)}
+  .ni-title{font-weight:600;font-size:14px}
+  .ni-desc{font-size:12px;color:var(--muted);line-height:1.4;margin-top:1px}
+  .sidebar-foot{margin-top:auto;padding:10px;font-size:11px;color:var(--muted);border-top:1px solid var(--border-muted)}
+
+  /* ---------- Main ---------- */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .topbar{height:52px;border-bottom:1px solid var(--border);display:grid;
+    grid-template-columns:1fr auto 1fr;align-items:center;padding:0 22px;gap:10px}
+  .topbar .left{display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden}
+  .topbar .newchat{justify-self:end}
+  .tempbox{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);white-space:nowrap}
+  .tempbox input[type=range]{width:110px;accent-color:var(--accent);cursor:pointer}
+  .tempbox .tval{font-variant-numeric:tabular-nums;color:var(--text);font-weight:600;min-width:30px;text-align:right}
+  .topbar .t-title{font-weight:600;font-size:15px}
+  .topbar .t-sub{font-size:12.5px;color:var(--muted)}
+  .newchat{margin-left:auto;font-size:13px;color:var(--muted);border:1px solid var(--border);
+    background:#fff;padding:5px 11px;border-radius:6px;cursor:pointer;font-family:var(--font)}
+  .newchat:hover{background:var(--hover)}
+
+  .scroll{flex:1;overflow-y:auto}
+  .thread{max-width:760px;margin:0 auto;padding:24px 24px 8px}
+
+  /* empty state */
+  .empty{max-width:640px;margin:0 auto;padding:8vh 24px 24px;text-align:center}
+  .empty h1{font-size:24px;font-weight:600;margin-bottom:6px}
+  .empty p{color:var(--muted);margin-bottom:26px;font-size:15px}
+  .chips{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left}
+  .chip{border:1px solid var(--border);border-radius:10px;padding:13px 15px;cursor:pointer;
+    background:#fff;color:var(--text);transition:.12s;font-size:13.5px}
+  .chip:hover{background:var(--canvas-subtle);border-color:var(--accent)}
+
+  /* messages */
+  .msg{display:flex;gap:13px;padding:16px 0;border-bottom:1px solid var(--border-muted)}
+  .msg:last-child{border-bottom:none}
+  .av{width:28px;height:28px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;
+    justify-content:center;font-size:12px;font-weight:600;color:#fff;overflow:visible}
+  .av.user{background:#57606a}
+  .av.bot{background:transparent}
+  .av.bot img{width:32px;height:32px;object-fit:contain;transform-origin:bottom center;animation:breathe 3.2s ease-in-out infinite}
+  .av.bot.talking img{animation:talk .5s ease-in-out infinite}
+  .hero-av{width:96px;height:96px;object-fit:contain;display:block;margin:0 auto 10px;transform-origin:bottom center;animation:breathe 3.4s ease-in-out infinite;filter:drop-shadow(0 8px 16px rgba(90,60,160,.18))}
+  .mood-av{width:72px;height:72px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 5px 11px rgba(90,60,160,.18))}
+  @keyframes breathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2px) scale(1.045)}}
+  @keyframes talk{0%,100%{transform:translateY(0) scale(1)}25%{transform:translateY(-2px) scale(1.09) rotate(-2deg)}50%{transform:translateY(0) scale(1)}75%{transform:translateY(-1px) scale(1.05) rotate(2deg)}}
+  .bubble{padding-top:3px}
+  .role{font-weight:600;font-size:13px;margin-bottom:2px}
+  .content{white-space:pre-wrap;word-wrap:break-word;color:#24292f}
+  .typing span{display:inline-block;width:6px;height:6px;margin-right:3px;border-radius:50%;
+    background:var(--muted);animation:blink 1.2s infinite}
+  .typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.2}30%{opacity:1}}
+
+  /* composer */
+  .composer{border-top:1px solid var(--border);padding:14px 24px 18px}
+  .composer .box{max-width:760px;margin:0 auto;border:1px solid var(--border);border-radius:12px;
+    display:flex;align-items:flex-end;padding:8px 8px 8px 14px;background:#fff;transition:border-color .12s}
+  .composer .box:focus-within{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  textarea{flex:1;border:none;outline:none;resize:none;font-family:var(--font);font-size:16px;
+    line-height:1.5;max-height:180px;color:var(--text);padding:5px 0;background:transparent}
+  .send{width:32px;height:32px;border-radius:7px;border:none;background:var(--text);color:#fff;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .send:disabled{background:#d0d7de;cursor:not-allowed}
+  .send svg{width:16px;height:16px}
+  .hint{max-width:760px;margin:8px auto 0;text-align:center;font-size:11.5px;color:var(--muted)}
+
+  /* ---------- Mobile / hamburger drawer ---------- */
+  .hamburger{display:none;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;
+    border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;color:var(--text)}
+  .hamburger svg{width:17px;height:17px}
+  .backdrop{display:none}
+  @media (max-width:768px){
+    .sidebar{position:fixed;top:0;bottom:0;left:0;z-index:50;width:min(82vw,300px);overflow-y:auto;
+      transform:translateX(-100%);transition:transform .22s ease;box-shadow:2px 0 18px rgba(0,0,0,.14)}
+    .sidebar.open{transform:translateX(0)}
+    .backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:40}
+    .backdrop.show{display:block}
+    .hamburger{display:flex}
+    .topbar{height:auto;min-height:52px;display:flex;flex-wrap:wrap;align-items:center;padding:8px 12px;gap:8px}
+    .topbar .left{flex:1 1 auto;min-width:0}
+    .topbar .t-sub{display:none}
+    .newchat{margin-left:0}
+    .tempbox{order:3;flex:1 0 100%;justify-content:center}
+    .thread{padding:16px 14px 8px}
+    .composer{padding:10px 12px 14px}
+    .chips{grid-template-columns:1fr}
+    .empty{padding:5vh 16px 24px}
+    .empty h1{font-size:20px}
+    .empty p{font-size:14px;margin-bottom:20px}
+  }
+</style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM4.5 7.5a1 1 0 112 0 1 1 0 01-2 0zm5 0a1 1 0 112 0 1 1 0 01-2 0zM5 10.5c.5.7 1.6 1.2 3 1.2s2.5-.5 3-1.2"/></svg></div>
+      <div class="name">Assistant</div>
+    </div>
+    <div class="nav-label">Modes</div>
+    <div class="nav-item active" data-mode="buddy" onclick="setMode('buddy')">
+      <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></span>
+      <div><div class="ni-title">Buddy</div><div class="ni-desc">A supportive friend who listens</div></div>
+    </div>
+    <div class="nav-item" data-mode="wit" onclick="setMode('wit')">
+      <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></span>
+      <div><div class="ni-title">Wit</div><div class="ni-desc">A witty friend who makes you laugh</div></div>
+    </div>
+    <div class="nav-item" data-mode="daycheck" onclick="setMode('daycheck')">
+      <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+      <div><div class="ni-title">Vibe Check</div><div class="ni-desc">Reads your emotions &amp; how your day is going</div></div>
+    </div>
+    <div class="sidebar-foot">Buddy &amp; Wit · 8B params · Vibe Check · 8M on-device params</div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="left">
+        <button class="hamburger" onclick="toggleNav()" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <span class="t-title" id="topTitle">Buddy</span>
+        <span class="t-sub" id="topSub">A supportive friend who listens</span>
+      </div>
+      <div class="tempbox" id="tempBox" style="display:none" title="How hard Wit roasts you: gentle → full roast">
+        <span>Humour Meter</span>
+        <input type="range" id="tempSlider" min="0" max="100" step="5" value="60" oninput="onHumour(this.value)">
+        <span class="tval" id="tempVal">🙂 Balanced</span>
+      </div>
+      <button class="newchat" onclick="newChat()">New chat</button>
+    </div>
+    <div class="scroll" id="scroll"><div class="thread" id="thread"></div></div>
+    <div class="composer">
+      <div class="box">
+        <textarea id="input" rows="1" placeholder="Message Buddy…"
+          oninput="autogrow(this)" onkeydown="onKey(event)"></textarea>
+        <button class="send" id="send" onclick="send()" disabled>
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 8l14-6-6 14-2-6-6-2z"/></svg>
+        </button>
+      </div>
+      <div class="hint" id="hint">Assistant can be imperfect. Have feedback? <a href="https://www.linkedin.com/in/aakash-varshney-6ab9911b/" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;font-weight:500">Message me on LinkedIn</a></div>
+    </div>
+  </main>
+  <div class="backdrop" id="backdrop" onclick="closeNav()"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+<script src="vibe.js"></script>
+<script>
+const MODES = {
+  buddy: { name:"Buddy", avatar:"avatar/buddy.png", sub:"8B params",
+    greeting:"Hi, I'm Buddy \u2014 what's on your mind today?",
+    sub2:"Share whatever's going on. No judgment, just a friend who listens.",
+    placeholder:"Message Buddy\u2026",
+    suggestions:["I'm feeling really overwhelmed today.","I bombed a presentation and feel terrible.",
+      "I'm anxious about a big decision.","Nobody replied to my messages and I feel down."] },
+  wit: { name:"Wit", avatar:"avatar/wit.png", sub:"8B params",
+    greeting:"I don't do knock-knock jokes - I make fun of your life, and you've given me plenty to work with.",
+    sub2:"Tell me what's going wrong today - work, family, your bank balance - and I'll find the funny in it.",
+    placeholder:"Say anything to Wit\u2026",
+    suggestions:["My relatives keep asking about my salary.","My boss messages me after work hours.",
+      "I'm broke till payday.","My mom keeps comparing me to my cousin."] },
+  daycheck: { name:"Vibe Check", avatar:"avatar/vibe.png", sub:"8M-parameter model \u00b7 6 emotions",
+    greeting:"Let's read your vibe",
+    sub2:"Vibe Check works best on a real conversation \u2014 chat with Buddy, then read the emotions from what you shared.",
+    placeholder:"Tell me about your day\u2026",
+    suggestions:["Today was exhausting, everything went wrong and I feel drained.","I got some amazing news and I'm on top of the world!",
+      "I'm nervous about tomorrow but also a little excited.","Work was frustrating but my friends really cheered me up."] }
+};
+const WIT_OPENERS = [
+  "I don't do knock-knock jokes - I make fun of your life, and you've given me plenty to work with.",
+  "Rough day? Perfect. That's basically my whole business model.",
+  "Think of me as your bad day's biggest fan - the worse it went, the funnier this gets.",
+  "I can't fix your problems, but I can absolutely laugh at them with you.",
+  "Your relatives, your boss, your bank balance - I make fun of all of it. So where do we start?",
+  "I turn your everyday disasters into jokes. Free of charge, no refunds."
+];
+let mode = "buddy";
+const history = { buddy: [], wit: [], daycheck: [] };
+const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+let roastLevel = 60;
+let temperature = 0.92;
+function onHumour(v){ const p=parseInt(v); roastLevel = p; temperature = +(0.65 + p/100*0.45).toFixed(3);
+  document.getElementById('tempVal').textContent = p<=35 ? '\uD83D\uDE0A Gentle' : (p<=75 ? '\uD83D\uDE42 Balanced' : '\uD83D\uDD25 Full Roast'); }
+
+function setMode(m){
+  mode = m;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.mode===m));
+  document.getElementById('topTitle').textContent = MODES[m].name;
+  document.getElementById('topSub').textContent = MODES[m].sub;
+  document.getElementById('input').placeholder = MODES[m].placeholder;
+  document.getElementById('tempBox').style.display = (m==='wit') ? 'flex' : 'none';
+  closeNav();
+  render();
+}
+function toggleNav(){ document.querySelector('.sidebar').classList.toggle('open'); document.getElementById('backdrop').classList.toggle('show'); }
+function closeNav(){ document.querySelector('.sidebar').classList.remove('open'); document.getElementById('backdrop').classList.remove('show'); }
+function newChat(){ history[mode] = []; render(); }
+
+function render(){
+  const t = document.getElementById('thread');
+  const h = history[mode];
+  if(h.length === 0){
+    const M = MODES[mode];
+    const greet = (mode==='wit') ? WIT_OPENERS[Math.floor(Math.random()*WIT_OPENERS.length)] : M.greeting;
+    const extra = (mode==='daycheck') ? `<div class="chip" style="background:var(--accent);color:#fff;font-weight:600;padding:11px 20px;border-radius:10px;font-size:14.5px" onclick="analyzeMyChats()">\uD83D\uDDC2\uFE0F Read my vibe from my Buddy chat</div>` : '';
+    t.innerHTML = `<div class="empty"><img class="hero-av" src="${M.avatar}" alt=""><h1>${esc(greet)}</h1><p>${esc(M.sub2)}</p>
+      <div class="chips">${extra}${M.suggestions.map(s=>`<div class="chip" onclick="pick('${esc(s).replace(/'/g,"\\'")}')">${esc(s)}</div>`).join('')}</div></div>`;
+  } else {
+    t.innerHTML = h.map(m=>{
+      const isU = m.role==='user';
+      return `<div class="msg"><div class="av ${isU?'user':'bot'}">${isU?'You':`<img src="${MODES[mode].avatar}" alt="">`}</div>
+        <div class="bubble"><div class="role">${isU?'You':MODES[mode].name}</div>
+        <div class="content">${m.html ? m.content : esc(m.content)}</div></div></div>`;
+    }).join('');
+  }
+  scrollDown();
+}
+function pick(s){ document.getElementById('input').value = s; autogrow(document.getElementById('input')); toggleSend(); send(); }
+function scrollDown(){ const s=document.getElementById('scroll'); s.scrollTop = s.scrollHeight; }
+function autogrow(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,180)+'px'; toggleSend(); }
+function toggleSend(){ document.getElementById('send').disabled = document.getElementById('input').value.trim()===''; }
+function onKey(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(); } }
+
+const EMO = { joy:['\uD83D\uDE0A','#e3a008'], sadness:['\uD83D\uDE22','#3b7dd8'], love:['\uD83E\uDD70','#d6336c'],
+              anger:['\uD83D\uDE20','#cf222e'], fear:['\uD83D\uDE28','#7048e8'], surprise:['\uD83D\uDE32','#0ca678'], neutral:['\uD83D\uDE10','#8b949e'] };
+function renderDay(d){
+  if(d.empty) return "Tell me a bit about your day (or read your Buddy &amp; Wit chat) and I'll get your vibe.";
+  const dist = d.distribution || {};
+  const calm = !Object.keys(dist).length;
+  const dom = calm ? 'neutral' : d.dominant;
+  const VIBE = { joy:['✨','Good vibes today'], love:['🥰','Lots of warmth today'],
+    sadness:['💙','Sounds like a heavy one'], anger:['😤','Sounds like a rough one'],
+    fear:['🫂','Sounds like an anxious one'], surprise:['😮','Well, that was unexpected'],
+    neutral:['😌','A calm, steady day'] };
+  const v = VIBE[dom] || ['😌','Here is your vibe'];
+  const dc = EMO[dom] || ['','#57606a'];
+  const moodAv = calm ? 'avatar/vibe.png' : (d.valence==='positive' ? 'avatar/happy.png' : (d.valence==='negative' ? 'avatar/sad.png' : 'avatar/vibe.png'));
+  let h = `<div style="display:flex;align-items:center;gap:13px;margin-bottom:13px"><img class="mood-av" src="${moodAv}" alt=""><div><div style="font-size:19px;font-weight:700;margin-bottom:3px">${v[0]} ${esc(v[1])}</div>`;
+  h += `<div style="font-size:12.5px;color:var(--muted)">the vibe: <b style="color:${dc[1]}">${dc[0]} ${calm?'calm':esc(dom)}</b>${calm?'':' · '+esc(d.valence)}</div></div></div>`;
+  if(d.note) h += `<div style="background:#f6f8fa;border:1px solid var(--border-muted);border-left:3px solid ${dc[1]};border-radius:12px;padding:14px 16px;font-size:15px;line-height:1.6;margin-bottom:14px">${esc(d.note)}</div>`;
+  if(d.valence==='negative') h += `<div onclick="setMode('wit')" style="cursor:pointer;display:inline-block;background:var(--accent);color:#fff;padding:10px 18px;border-radius:9px;font-weight:600;font-size:14px;margin-bottom:16px">😄 Want a laugh? Chat with Wit</div>`;
+  else if(d.valence==='positive') h += `<div onclick="setMode('wit')" style="cursor:pointer;display:inline-block;background:#1a7f37;color:#fff;padding:10px 18px;border-radius:9px;font-weight:600;font-size:14px;margin-bottom:16px">🎉 Riff on the good news with Wit</div>`;
+  if(!calm){
+    const order = Object.keys(dist).sort((a,b)=>dist[b]-dist[a]);
+    h += '<details style="margin-bottom:8px"><summary style="cursor:pointer;font-size:12px;color:var(--muted);user-select:none">See the full emotion read</summary><div style="margin:10px 0 4px">';
+    order.forEach(e=>{ const c=EMO[e]||['•','#888'];
+      h += `<div style="display:flex;align-items:center;gap:9px;font-size:12.5px;margin-bottom:6px"><span style="width:84px;text-transform:capitalize">${c[0]} ${e}</span><div style="flex:1;background:#eef1f4;border-radius:6px;height:8px;overflow:hidden"><div style="width:${dist[e]}%;height:100%;background:${c[1]}"></div></div><span style="width:40px;text-align:right;color:#8b949e">${dist[e]}%</span></div>`; });
+    if(d.words && d.words.length){
+      h += '<div style="font-size:11.5px;color:#8b949e;margin:8px 0 4px">Words that stood out:</div><div style="line-height:2.1;font-size:13px">';
+      h += d.words.map(([w,emo])=>{ const c=(EMO[emo]||['','#888'])[1]; return `<span style="background:${c}1f;border-bottom:2px solid ${c};padding:1px 5px;border-radius:4px">${esc(w)}</span>`; }).join(' ');
+      h += '</div>';
+    }
+    h += '</div></details>';
+  }
+  h += '<div style="font-size:11.5px;color:#8b949e;margin-top:6px">🔒 Read by an 8M mini-transformer · analyzed in the moment · never saved.</div>';
+  return h;
+}
+
+let busy = false;
+async function vibeAnalyze(texts){
+  await vibeReady();
+  const d = await analyzeDay(texts);
+  d.note = await fetchNote(d, texts.join(' '));
+  return d;
+}
+async function fetchNote(d, text){
+  try{
+    const r = await fetch('https://buddy-mini-transformer.pages.dev/api/note', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ dominant:d.dominant||'mixed', valence:d.valence||'mixed', text })});
+    return (await r.json()).note || '';
+  }catch(e){ return ''; }
+}
+async function send(){
+  const inp = document.getElementById('input');
+  const text = inp.value.trim();
+  if(!text || busy) return;
+  busy = true;
+  history[mode].push({role:'user', content:text});
+  inp.value=''; inp.style.height='auto'; toggleSend();
+  render();
+  const t = document.getElementById('thread');
+  t.insertAdjacentHTML('beforeend',
+    `<div class="msg" id="typing"><div class="av bot talking"><img src="${MODES[mode].avatar}" alt=""></div>
+     <div class="bubble"><div class="role">${MODES[mode].name}</div>
+     <div class="typing"><span></span><span></span><span></span></div></div></div>`);
+  scrollDown();
+  try{
+    if(mode==='daycheck'){
+      const d = await vibeAnalyze([text]);
+      history[mode].push({role:'assistant', content: renderDay(d), html:true});
+      busy=false; render();
+    } else {
+      await streamChat(mode, text);
+    }
+  }catch(err){
+    document.getElementById('typing')?.remove();
+    history[mode].push({role:'assistant', content:"(Something went wrong reaching the model.)"});
+    busy=false; render();
+  }
+}
+async function streamChat(m, text){
+  const res = await fetch('https://buddy-mini-transformer.pages.dev/api/chat', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ mode:m, message:text, history: history[m].slice(0,-1), temperature, roast: roastLevel })});
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let acc = '', el = null;
+  while(true){
+    const {done, value} = await reader.read();
+    if(done) break;
+    acc += dec.decode(value, {stream:true});
+    if(!el){
+      const typing = document.getElementById('typing');
+      const id = 'stream-'+Date.now();
+      if(typing) typing.outerHTML =
+        `<div class="msg"><div class="av bot talking"><img src="${MODES[m].avatar}" alt=""></div><div class="bubble"><div class="role">${MODES[m].name}</div><div class="content" id="${id}"></div></div></div>`;
+      el = document.getElementById(id);
+    }
+    if(el){ el.textContent = acc; scrollDown(); }
+  }
+  document.getElementById('typing')?.remove();
+  history[m].push({role:'assistant', content: acc.trim() || "\u2026"});
+  busy=false; render();
+}
+async function runDay(texts, bubble){
+  if(busy || !texts.length) return;
+  busy = true;
+  if(mode!=='daycheck') setMode('daycheck');
+  history.daycheck.push({role:'user', content:bubble});
+  render();
+  const t=document.getElementById('thread');
+  t.insertAdjacentHTML('beforeend',
+    `<div class="msg" id="typing"><div class="av bot talking"><img src="${MODES.daycheck.avatar}" alt=""></div><div class="bubble"><div class="role">${MODES.daycheck.name}</div><div class="typing"><span></span><span></span><span></span></div></div></div>`);
+  scrollDown();
+  try{
+    const d = await vibeAnalyze(texts);
+    history.daycheck.push({role:'assistant', content:renderDay(d), html:true});
+  }catch(err){ history.daycheck.push({role:'assistant', content:"(Something went wrong reading the emotions.)"}); }
+  busy = false; render();
+}
+function analyzeMyChats(){
+  const msgs = history.buddy.filter(m=>m.role==='user').map(m=>m.content);
+  if(!msgs.length){ alert("Chat with Buddy first \u2014 then I can read the emotions from what you shared."); return; }
+  runDay(msgs, "Read the emotions from my Buddy chat");
+}
+render();
+// Preload the on-device Vibe model in the background as soon as the page loads,
+// so it's ready by the time the user opens Vibe Check.
+vibeReady().catch(()=>{});
+</script>
+</body>
+</html>
