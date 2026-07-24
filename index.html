@@ -140,11 +140,15 @@
       <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></span>
       <div><div class="ni-title">Wit</div><div class="ni-desc">A witty friend who makes you laugh</div></div>
     </div>
+    <div class="nav-item" data-mode="maamoo" onclick="setMode('maamoo')">
+      <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 15s1.5 2 4 2 4-2 4-2"/><path d="M6.5 9.5h4M13.5 9.5h4"/></svg></span>
+      <div><div class="ni-title">Maamoo</div><div class="ni-desc">Your local bhai who makes you laugh</div></div>
+    </div>
     <div class="nav-item" data-mode="daycheck" onclick="setMode('daycheck')">
       <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
       <div><div class="ni-title">Vibe Check</div><div class="ni-desc">Reads your emotions &amp; how your day is going</div></div>
     </div>
-    <div class="sidebar-foot">Buddy &amp; Wit · 8B params · Vibe Check · 8M on-device params</div>
+    <div class="sidebar-foot">Buddy, Wit &amp; Maamoo · 8B params · Vibe Check · 8M on-device params</div>
   </aside>
 
   <main class="main">
@@ -191,6 +195,12 @@ const MODES = {
     placeholder:"Say anything to Wit\u2026",
     suggestions:["My relatives keep asking about my salary.","My boss messages me after work hours.",
       "I'm broke till payday.","My mom keeps comparing me to my cousin."] },
+  maamoo: { name:"Maamoo", avatar:"avatar/maamoo.png", sub:"8B params",
+    greeting:"Aur bhidu! Apun aa gaya. Bol, aaj kya scene hai?",
+    sub2:"Tera apna local bhai - thodi hasi, thoda gyaan, aur full support. Bol, kya chal raha hai?",
+    placeholder:"Maamoo se baat kar\u2026",
+    suggestions:["Kal interview hai, thodi tension ho rahi hai.","Aaj ka din ekdum bekaar gaya.",
+      "Rishtedaar salary poochte rehte hai.","Boss chhutti ke baad bhi message karta hai."] },
   daycheck: { name:"Vibe Check", avatar:"avatar/vibe.png", sub:"8M-parameter model \u00b7 6 emotions",
     greeting:"Let's read your vibe",
     sub2:"Vibe Check works best on a real conversation \u2014 chat with Buddy, then read the emotions from what you shared.",
@@ -206,8 +216,15 @@ const WIT_OPENERS = [
   "Your relatives, your boss, your bank balance - I make fun of all of it. So where do we start?",
   "I turn your everyday disasters into jokes. Free of charge, no refunds."
 ];
+const MAAMOO_OPENERS = [
+  "Aur bhidu! Apun aa gaya. Bata, aaj ka kya scene hai - kaam ka tension ya bas timepass?",
+  "Arre aao aao boss! Baith, ek cutting chai mangwaata hoon. Kya haal chaal?",
+  "Kya bhidu, kaisa hai? Apun ke rehte kaahe ka tension - bol, kya baat hai?",
+  "Aaj life ne thoda panga liya kya? Chinta nahi - apun hai na, sab set kar denge.",
+  "Aur mere dost! Suna, kya chal raha hai zindagi mein - achha, bura ya ekdum jhakaas?"
+];
 let mode = "buddy";
-const history = { buddy: [], wit: [], daycheck: [] };
+const history = { buddy: [], wit: [], daycheck: [], maamoo: [] };
 const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 let roastLevel = 60;
 let temperature = 0.92;
@@ -233,7 +250,7 @@ function render(){
   const h = history[mode];
   if(h.length === 0){
     const M = MODES[mode];
-    const greet = (mode==='wit') ? WIT_OPENERS[Math.floor(Math.random()*WIT_OPENERS.length)] : M.greeting;
+    const greet = (mode==='wit') ? WIT_OPENERS[Math.floor(Math.random()*WIT_OPENERS.length)] : (mode==='maamoo' ? MAAMOO_OPENERS[Math.floor(Math.random()*MAAMOO_OPENERS.length)] : M.greeting);
     const extra = (mode==='daycheck') ? `<div class="chip" style="background:var(--accent);color:#fff;font-weight:600;padding:11px 20px;border-radius:10px;font-size:14.5px" onclick="analyzeMyChats()">\uD83D\uDDC2\uFE0F Read my vibe from my Buddy chat</div>` : '';
     t.innerHTML = `<div class="empty"><img class="hero-av" src="${M.avatar}" alt=""><h1>${esc(greet)}</h1><p>${esc(M.sub2)}</p>
       <div class="chips">${extra}${M.suggestions.map(s=>`<div class="chip" onclick="pick('${esc(s).replace(/'/g,"\\'")}')">${esc(s)}</div>`).join('')}</div></div>`;
