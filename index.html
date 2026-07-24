@@ -15,7 +15,7 @@
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{font-family:var(--font);color:var(--text);background:var(--bg);
-    -webkit-font-smoothing:antialiased;display:flex;height:100vh;height:100dvh;overflow:hidden;font-size:14px;line-height:1.6}
+    -webkit-font-smoothing:antialiased;display:flex;height:100vh;height:100dvh;height:var(--app-h,100dvh);overflow:hidden;font-size:14px;line-height:1.6}
 
   /* ---------- Sidebar ---------- */
   .sidebar{width:272px;min-width:272px;background:var(--sidebar);border-right:1px solid var(--border);
@@ -99,6 +99,11 @@
   .send svg{width:16px;height:16px}
   .hint{max-width:760px;margin:8px auto 0;text-align:center;font-size:11.5px;color:var(--muted)}
 
+  /* ---------- Mode bar (mobile quick-switch) ---------- */
+  .modebar{display:none}
+  .mpill img{width:30px;height:30px;object-fit:contain}
+  .mpill span{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}
+
   /* ---------- Mobile / hamburger drawer ---------- */
   .hamburger{display:none;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;
     border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;color:var(--text)}
@@ -122,6 +127,14 @@
     .empty{padding:5vh 16px 24px}
     .empty h1{font-size:20px}
     .empty p{font-size:14px;margin-bottom:20px}
+    body{position:fixed;top:0;left:0;width:100%}
+    .modebar{display:flex;gap:7px;padding:7px 10px;border-bottom:1px solid var(--border);
+      overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--bg)}
+    .modebar::-webkit-scrollbar{display:none}
+    .mpill{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 9px;
+      border-radius:11px;border:1px solid var(--border);background:#fff;cursor:pointer;flex:0 0 auto;min-width:58px}
+    .mpill.active{background:var(--canvas-subtle);border-color:var(--accent)}
+    .mpill.active span{color:var(--accent)}
   }
 </style>
 </head>
@@ -164,6 +177,12 @@
         <span class="tval" id="tempVal">🙂 Balanced</span>
       </div>
       <button class="newchat" onclick="newChat()">New chat</button>
+    </div>
+    <div class="modebar" id="modebar">
+      <div class="mpill active" data-mode="buddy" onclick="setMode('buddy')"><img src="avatar/buddy.png" alt=""><span>Buddy</span></div>
+      <div class="mpill" data-mode="wit" onclick="setMode('wit')"><img src="avatar/wit.png" alt=""><span>Wit</span></div>
+      <div class="mpill" data-mode="maamoo" onclick="setMode('maamoo')"><img src="avatar/maamoo.png" alt=""><span>Maamoo</span></div>
+      <div class="mpill" data-mode="daycheck" onclick="setMode('daycheck')"><img src="avatar/vibe.png" alt=""><span>Vibe</span></div>
     </div>
     <div class="scroll" id="scroll"><div class="thread" id="thread"></div></div>
     <div class="composer">
@@ -234,6 +253,7 @@ function onHumour(v){ const p=parseInt(v); roastLevel = p; temperature = +(0.65 
 function setMode(m){
   mode = m;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.mode===m));
+  document.querySelectorAll('.mpill').forEach(n=>n.classList.toggle('active', n.dataset.mode===m));
   document.getElementById('topTitle').textContent = MODES[m].name;
   document.getElementById('topSub').textContent = MODES[m].sub;
   document.getElementById('input').placeholder = MODES[m].placeholder;
@@ -391,6 +411,19 @@ function analyzeMyChats(){
   if(!msgs.length){ alert("Chat with Buddy first \u2014 then I can read the emotions from what you shared."); return; }
   runDay(msgs, "Read the emotions from my Buddy chat");
 }
+// Keep the app sized to the visible viewport so the mobile keyboard doesn't shove the whole screen up.
+function appViewportFit(){
+  var vv = window.visualViewport;
+  document.documentElement.style.setProperty('--app-h', (vv ? vv.height : window.innerHeight) + 'px');
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', appViewportFit);
+  window.visualViewport.addEventListener('scroll', appViewportFit);
+}
+window.addEventListener('resize', appViewportFit);
+window.addEventListener('orientationchange', function(){ setTimeout(appViewportFit, 250); });
+appViewportFit();
+document.getElementById('input').addEventListener('focus', function(){ setTimeout(function(){ appViewportFit(); scrollDown(); }, 300); });
 render();
 // Preload the on-device Vibe model in the background as soon as the page loads,
 // so it's ready by the time the user opens Vibe Check.
