@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
 <title>Buddy Mini Transformer</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
 <style>
@@ -411,10 +411,17 @@ function analyzeMyChats(){
   if(!msgs.length){ alert("Chat with Buddy first \u2014 then I can read the emotions from what you shared."); return; }
   runDay(msgs, "Read the emotions from my Buddy chat");
 }
-// Keep the app sized to the visible viewport so the mobile keyboard doesn't shove the whole screen up.
+// Keep the app glued to the VISIBLE viewport so the mobile keyboard doesn't shove the whole screen up.
+// iOS pins position:fixed to the LAYOUT viewport, so when the keyboard opens it scrolls the shell up;
+// we counteract that by re-aligning the shell to the visual viewport (translate by offsetTop) instead of moving the page.
 function appViewportFit(){
   var vv = window.visualViewport;
-  document.documentElement.style.setProperty('--app-h', (vv ? vv.height : window.innerHeight) + 'px');
+  if(vv){
+    document.documentElement.style.setProperty('--app-h', vv.height + 'px');
+    document.body.style.transform = 'translateY(' + Math.max(0, vv.offsetTop) + 'px)';
+  } else {
+    document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px');
+  }
 }
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', appViewportFit);
@@ -424,6 +431,7 @@ window.addEventListener('resize', appViewportFit);
 window.addEventListener('orientationchange', function(){ setTimeout(appViewportFit, 250); });
 appViewportFit();
 document.getElementById('input').addEventListener('focus', function(){ setTimeout(function(){ appViewportFit(); scrollDown(); }, 300); });
+document.getElementById('input').addEventListener('blur', function(){ setTimeout(appViewportFit, 100); });
 render();
 // Preload the on-device Vibe model in the background as soon as the page loads,
 // so it's ready by the time the user opens Vibe Check.
