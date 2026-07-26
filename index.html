@@ -432,7 +432,14 @@ window.addEventListener('orientationchange', function(){ setTimeout(appViewportF
 appViewportFit();
 document.getElementById('input').addEventListener('focus', function(){ setTimeout(function(){ appViewportFit(); scrollDown(); }, 300); });
 document.getElementById('input').addEventListener('blur', function(){ setTimeout(appViewportFit, 100); });
-render();
+// Deep link: ?mode=maamoo (or #maamoo) opens that character directly.
+(function(){
+  var p = new URLSearchParams(location.search).get('mode') || location.hash.replace('#','');
+  var alias = { maamoo:'maamoo', mamu:'maamoo', bhai:'maamoo', wit:'wit', buddy:'buddy',
+                vibe:'daycheck', daycheck:'daycheck', vibecheck:'daycheck' };
+  var m = alias[(p||'').toLowerCase()];
+  if (m) { setMode(m); } else { render(); }
+})();
 // Preload the on-device Vibe model in the background as soon as the page loads,
 // so it's ready by the time the user opens Vibe Check.
 vibeReady().catch(()=>{});

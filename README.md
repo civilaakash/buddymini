@@ -2,9 +2,11 @@
 
 **Four AI personalities in one tiny web app — including a mood-reader I trained from scratch that runs entirely in your browser.**
 
-### 👉 [**Open the app**](https://civilaakash.github.io/buddymini/) 👈
+## 🧢 [**→ Talk to Maamoo, your local bhai**](https://civilaakash.github.io/buddymini/?mode=maamoo)
 
-No signup. No app install. Nothing saved.
+Tell him your Monday is already ruined. See what he says.
+
+*or* [open the full app](https://civilaakash.github.io/buddymini/) — no signup, no install, nothing saved.
 
 ---
 
