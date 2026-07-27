@@ -64,6 +64,8 @@
   .chip{border:1px solid var(--border);border-radius:10px;padding:13px 15px;cursor:pointer;
     background:#fff;color:var(--text);transition:.12s;font-size:13.5px}
   .chip:hover{background:var(--canvas-subtle);border-color:var(--accent)}
+  .shuf{display:inline-block;margin-top:14px;font-size:13px;color:var(--muted);cursor:pointer;
+    text-decoration:underline;text-underline-offset:3px;user-select:none}
 
   /* messages */
   .msg{display:flex;gap:13px;padding:16px 0;border-bottom:1px solid var(--border-muted)}
@@ -124,9 +126,11 @@
     .thread{padding:16px 14px 8px}
     .composer{padding:10px 12px 14px}
     .chips{grid-template-columns:1fr}
-    .empty{padding:5vh 16px 24px}
-    .empty h1{font-size:20px}
-    .empty p{font-size:14px;margin-bottom:20px}
+    .empty{padding:8vh 16px 24px}
+    .empty h1{font-size:19px;margin-bottom:5px}
+    .empty p{font-size:13.5px;margin-bottom:18px}
+    .hero-av{width:120px;height:120px;margin-bottom:14px}
+    .chip{padding:15px 16px;font-size:14.5px}
     body{position:fixed;top:0;left:0;width:100%}
     .modebar{display:flex;gap:7px;padding:7px 10px;border-bottom:1px solid var(--border);
       overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--bg)}
@@ -207,25 +211,33 @@ const MODES = {
     sub2:"Share whatever's going on. No judgment, just a friend who listens.",
     placeholder:"Message Buddy\u2026",
     suggestions:["I'm feeling really overwhelmed today.","I bombed a presentation and feel terrible.",
-      "I'm anxious about a big decision.","Nobody replied to my messages and I feel down."] },
+      "I'm anxious about a big decision.","Nobody replied to my messages and I feel down.",
+      "I can't switch off from work at night.","I feel like I'm falling behind everyone my age.",
+      "I had a fight with someone close to me.","I'm tired and I don't really know why."] },
   wit: { name:"Wit", avatar:"avatar/wit.png", sub:"8B params",
     greeting:"I don't do knock-knock jokes - I make fun of your life, and you've given me plenty to work with.",
     sub2:"Tell me what's going wrong today - work, family, your bank balance - and I'll find the funny in it.",
     placeholder:"Say anything to Wit\u2026",
     suggestions:["My relatives keep asking about my salary.","My boss messages me after work hours.",
-      "I'm broke till payday.","My mom keeps comparing me to my cousin."] },
+      "I'm broke till payday.","My mom keeps comparing me to my cousin.",
+      "I have 47 tabs open and no idea why.","My gym membership is just a monthly donation.",
+      "I said \u201Clet's circle back\u201D three times today.","My big weekend plan is doing laundry."] },
   maamoo: { name:"Maamoo", avatar:"avatar/maamoo.png", sub:"8B params",
     greeting:"Aur bhidu! Apun aa gaya. Bol, aaj kya scene hai?",
     sub2:"Tera apna local bhai - thodi hasi, thoda gyaan, aur full support. Bol, kya chal raha hai?",
     placeholder:"Maamoo se baat kar\u2026",
     suggestions:["Kal interview hai, thodi tension ho rahi hai.","Aaj ka din ekdum bekaar gaya.",
-      "Rishtedaar salary poochte rehte hai.","Boss chhutti ke baad bhi message karta hai."] },
+      "Rishtedaar salary poochte rehte hai.","Boss chhutti ke baad bhi message karta hai.",
+      "Monday hai aur mood ekdum off hai.","Traffic mein do ghante barbaad ho gaye.",
+      "Ghar wale shaadi ke peeche pade hai.","Paisa mahine ke pehle hi khatam ho gaya."] },
   daycheck: { name:"Vibe Check", avatar:"avatar/vibe.png", sub:"8M-parameter model \u00b7 6 emotions",
     greeting:"Let's read your vibe",
     sub2:"Vibe Check works best on a real conversation \u2014 chat with Buddy, then read the emotions from what you shared.",
     placeholder:"Tell me about your day\u2026",
     suggestions:["Today was exhausting, everything went wrong and I feel drained.","I got some amazing news and I'm on top of the world!",
-      "I'm nervous about tomorrow but also a little excited.","Work was frustrating but my friends really cheered me up."] }
+      "I'm nervous about tomorrow but also a little excited.","Work was frustrating but my friends really cheered me up.",
+      "I feel calm for the first time in weeks.","Everything is fine but I still feel a bit empty.",
+      "I'm angry about something I can't control.","I think I made the wrong choice and it's bothering me."] }
 };
 const WIT_OPENERS = [
   "I don't do knock-knock jokes - I make fun of your life, and you've given me plenty to work with.",
@@ -272,8 +284,13 @@ function render(){
     const M = MODES[mode];
     const greet = (mode==='wit') ? WIT_OPENERS[Math.floor(Math.random()*WIT_OPENERS.length)] : (mode==='maamoo' ? MAAMOO_OPENERS[Math.floor(Math.random()*MAAMOO_OPENERS.length)] : M.greeting);
     const extra = (mode==='daycheck') ? `<div class="chip" style="background:var(--accent);color:#fff;font-weight:600;padding:11px 20px;border-radius:10px;font-size:14.5px" onclick="analyzeMyChats()">\uD83D\uDDC2\uFE0F Read my vibe from my Buddy chat</div>` : '';
+    const isNarrow = window.matchMedia('(max-width:768px)').matches;
+    const pool = M.suggestions.slice();
+    for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+    const picks = pool.slice(0, isNarrow ? 1 : 4);
+    const shuf = isNarrow ? `<div class="shuf" onclick="render()">Try another</div>` : '';
     t.innerHTML = `<div class="empty"><img class="hero-av" src="${M.avatar}" alt=""><h1>${esc(greet)}</h1><p>${esc(M.sub2)}</p>
-      <div class="chips">${extra}${M.suggestions.map(s=>`<div class="chip" onclick="pick('${esc(s).replace(/'/g,"\\'")}')">${esc(s)}</div>`).join('')}</div></div>`;
+      <div class="chips">${extra}${picks.map(s=>`<div class="chip" onclick="pick('${esc(s).replace(/'/g,"\\'")}')">${esc(s)}</div>`).join('')}</div>${shuf}</div>`;
   } else {
     t.innerHTML = h.map(m=>{
       const isU = m.role==='user';
