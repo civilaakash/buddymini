@@ -1,74 +1,36 @@
 # Buddy Mini Transformer
 
-**Four AI personalities in one tiny web app — including a mood-reader I trained from scratch that runs entirely in your browser.**
+**Five distinct AI characters in one responsive web app. Pick the person who fits the moment and continue where you left off.**
 
-## 🧢 [**→ Talk to Maamoo, your local bhai**](https://civilaakash.github.io/buddymini/?mode=maamoo)
+## [Open the app](https://civilaakash.github.io/buddymini/)
 
-Tell him your Monday is already ruined. See what he says.
+No signup or install.
 
-*or* [open the full app](https://civilaakash.github.io/buddymini/) — no signup, no install, nothing saved.
+| Character | What they do |
+|---|---|
+| **Buddy** | Listens when the day has been heavy—English only |
+| **Maamoo** | A warm neighbourhood bhai who answers in Roman Hinglish |
+| **Naina** | Playful and affectionate; matches English or Roman Hinglish |
+| **Neil** | Calm, steady, and attentive; matches English or Roman Hinglish |
+| **Wit** | Finds the joke in the situation, with a **Gentle → Balanced → Full Roast** humour meter |
 
----
+Each character keeps a separate local conversation. The app never shares one character's chat history with another.
 
-## The four modes
+## Architecture
 
-| Mode | What it does |
-|------|-------------|
-| 🫂 **Buddy** | A warm friend who listens when the day has been heavy |
-| 😄 **Wit** | Finds the funny in your everyday chaos — with a roast dial from gentle to savage |
-| 🧢 **Maamoo** | Your local bhai. Replies in Hinglish, half comedy and half pep talk |
-| 🎭 **Vibe Check** | Reads the emotion in your words — **8.3M parameters, running on your device** |
-
----
-
-## The interesting part
-
-**Vibe Check is not an API call.** It is a transformer I built and trained from scratch — the architecture, the training loop, the tokenizer, all of it — then exported to ONNX so it runs **inside your browser tab**.
-
-- **8.3 million parameters** (about 20,000× smaller than a frontier model)
-- **~88% accuracy** on the `dair-ai/emotion` validation set
-- **Zero server calls** — your text never leaves your device
-- Model published here: [`AakashakaAkku/vibe-check-emotion`](https://huggingface.co/AakashakaAkku/vibe-check-emotion)
-
-Buddy, Wit and Maamoo are personality work on top of Llama 3.3 running via Groq — prompt engineering, not fine-tuning, which was the right call for three distinct voices.
-
----
-
-## How it is built
-
-```
-Browser  ──►  Cloudflare Pages (static hosting, free)
-              │
-              ├─►  Cloudflare Worker  ──►  Groq API (Llama 3.3 70B)
-              │      keeps the API key server-side, streams tokens back
-              │
-              └─►  vibe.onnx  ──►  runs on-device via onnxruntime-web
+```text
+Browser
+  ├─ responsive character UI + local conversation history
+  └─ Cloudflare Pages Worker
+       └─ Groq API (Llama 3.3 70B, with 8B fallback)
 ```
 
-- **Frontend** — one HTML file, no framework, no build step
-- **Backend** — a single Cloudflare Worker (`worker.js`)
-- **On-device model** — ONNX, int8 quantised, ~8 MB
-- **Cost to run** — ₹0. Free tiers all the way down.
+- **Frontend:** plain HTML, CSS, and JavaScript
+- **Backend:** one Cloudflare Pages Worker; API key remains server-side
+- **Hosting:** Cloudflare Pages with a GitHub Pages mirror
+- **Cost:** free-tier infrastructure
 
----
-
-## Why I built it
-
-I am a product manager who wanted to stop hand-waving about how LLMs work. So I built one small enough to understand completely, and shipped it publicly so the learning had consequences.
-
-Things it taught me that reading could not:
-- Small models are wildly underrated — 8M parameters is enough to be useful
-- Personality beats features; people did not want "a chatbot", they wanted one that talks back
-- Streaming does not make anything faster, but it changes everything about how fast it *feels*
-
----
-
-## Try to break it
-
-Genuinely — tell Wit it is not funny, ask Maamoo something in English, feed Vibe Check something sarcastic. The failures are the interesting part, and they all end up in my eval set.
+The separate Vibe Check emotion model remains published at
+[`AakashakaAkku/vibe-check-emotion`](https://huggingface.co/AakashakaAkku/vibe-check-emotion).
 
 Feedback → [LinkedIn](https://www.linkedin.com/in/aakash-varshney-6ab9911b/)
-
----
-
-*Built over a few weekends. Apache-2.0.*
