@@ -351,14 +351,16 @@
     border-bottom: 1px solid var(--cp-border);
     flex-shrink: 0;
   }
-  .back, .rename {
+  .back, .rename, .clear {
     background: none;
     border: 0;
     color: var(--cp-text-muted);
     cursor: pointer;
   }
   .back { font-size: 27px; padding: 0 4px 3px; line-height: 1; }
-  .rename { margin-left: auto; font-size: 13px; padding: 6px; }
+  .cbar-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
+  .rename, .clear { font-size: 13px; padding: 6px; }
+  .clear[hidden] { display: none; }
   .cbar .av { width: 39px; height: 39px; font-size: 15px; }
   .cbar b { font-size: 16.5px; font-weight: 650; display: block; letter-spacing: -.2px; }
   .cbar small { color: var(--cp-text-muted); font-size: 12.5px; }
@@ -644,7 +646,10 @@
       <button class="back" id="chatBack">‹</button>
       <span id="cAv"></span>
       <div><b id="cName"></b><small id="cTag"></small></div>
-      <button class="rename" id="renameBtn">Edit</button>
+      <div class="cbar-actions">
+        <button class="clear" id="clearBtn" title="Clear this chat">Clear</button>
+        <button class="rename" id="renameBtn">Edit</button>
+      </div>
     </div>
     <div class="humour" id="humourBox" hidden>
       <strong>Humour Meter</strong>
@@ -667,6 +672,11 @@
     <label>How do they talk to you?<input id="f-style" maxlength="120" placeholder="teasing, calm and steady, straight-talking"></label>
     <div class="warn" id="buildWarn"></div>
     <div class="btns"><button class="no" id="buildSkip">Skip</button><button class="ok" id="buildOk">Save</button></div>
+  </dialog>
+  <dialog id="clearDlg">
+    <h3>Clear this chat?</h3>
+    <p id="clearMsg">This wipes the conversation from this device. It can't be undone.</p>
+    <div class="btns"><button class="no" id="clearNo">Cancel</button><button class="ok" id="clearYes">Clear chat</button></div>
   </dialog>
 
 </div>
@@ -719,7 +729,7 @@ function drawHome(push = true){
         <div class="tag">${c.tag}</div>
         <div class="blurb">${mine ? esc(mine) : c.blurb}</div>
       </div>
-      <span class="card-action">${st ? "Resume" : "Talk"}<span class="arrow">→</span></span>
+      <span class="card-action">${st && st.log.length ? "Resume" : "Talk"}<span class="arrow">→</span></span>
       ${st && st.unseen ? '<span class="dot"></span>' : ''}
     </button>`;
   }).join("");
@@ -780,6 +790,7 @@ function openChat(id){
   $("#cName").textContent = st.name;
   $("#cTag").textContent = cur.tag;
   $("#renameBtn").hidden = !["naina", "neil"].includes(id);
+  $("#clearBtn").hidden = !st.log.length;
   $("#humourBox").hidden = id !== "wit";
   const t = $("#thread");
   const starters = !st.log.length && cur.starters?.length
@@ -833,6 +844,7 @@ $("#form").onsubmit = async e => {
   $("#tp")?.remove();
   st.log.push({ role: "them", text: reply });
   st.when = "now"; put();
+  $("#clearBtn").hidden = false;
   t.insertAdjacentHTML("beforeend", `<div class="b them">${esc(reply)}</div>`);
   t.scrollTop = t.scrollHeight;
   $("#send").disabled = false; $("#msg").focus();
@@ -840,6 +852,19 @@ $("#form").onsubmit = async e => {
 
 $("#renameBtn").onclick = () => openBuilder(cur.id);
 $("#chatBack").onclick = () => drawHome();
+
+$("#clearBtn").onclick = () => {
+  if (!cur || !S.chats[cur.id].log.length) return;
+  $("#clearMsg").textContent = `This wipes your conversation with ${S.chats[cur.id].name} from this device. It can't be undone.`;
+  $("#clearDlg").showModal();
+};
+$("#clearNo").onclick = () => $("#clearDlg").close();
+$("#clearYes").onclick = () => {
+  const st = S.chats[cur.id];
+  st.log = []; st.unseen = false; st.when = "now"; put();
+  $("#clearDlg").close();
+  openChat(cur.id);
+};
 
 apiFetch("/api/cast").then(r => r.json()).then(d => {
   CAST = d;
