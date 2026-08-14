@@ -358,12 +358,13 @@
     cursor: pointer;
   }
   .back { font-size: 27px; padding: 0 4px 3px; line-height: 1; }
-  .cbar-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
-  .rename, .clear { font-size: 13px; padding: 6px; }
+  .cbar-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .rename, .clear { font-size: 13px; padding: 6px; white-space: nowrap; }
   .clear[hidden] { display: none; }
-  .cbar .av { width: 39px; height: 39px; font-size: 15px; }
-  .cbar b { font-size: 16.5px; font-weight: 650; display: block; letter-spacing: -.2px; }
-  .cbar small { color: var(--cp-text-muted); font-size: 12.5px; }
+  .cbar .av { width: 39px; height: 39px; font-size: 15px; flex-shrink: 0; }
+  .cbar > div:not(.cbar-actions) { min-width: 0; }
+  .cbar b { font-size: 16.5px; font-weight: 650; display: block; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cbar small { color: var(--cp-text-muted); font-size: 12.5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .humour {
     width: min(100%, 780px);
     margin: 0 auto;
@@ -380,6 +381,56 @@
   .humour strong { color: var(--cp-text); font-size: 12px; white-space: nowrap; }
   .humour input { flex: 1; min-width: 90px; accent-color: var(--cp-accent); }
   .humour-output { min-width: 84px; color: var(--cp-text); font-weight: 650; text-align: right; white-space: nowrap; }
+  .modes {
+    display: flex;
+    gap: 6px;
+    padding: 9px 14px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--cp-border);
+    background: var(--cp-bg-elevated);
+    scrollbar-width: none;
+    flex-shrink: 0;
+  }
+  .modes::-webkit-scrollbar { display: none; }
+  .modes[hidden] { display: none; }
+  .mode {
+    flex: 0 0 auto;
+    border: 1px solid var(--cp-border);
+    background: var(--cp-surface);
+    color: var(--cp-text-muted);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .mode[aria-pressed="true"] { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); }
+  dialog .row { display: flex; gap: 9px; }
+  dialog .row label { flex: 1; }
+  dialog select {
+    width: 100%;
+    border: 1px solid var(--cp-border);
+    background: var(--cp-surface);
+    color: var(--cp-text);
+    border-radius: 0.625rem;
+    padding: 11px 13px;
+    font-size: 15px;
+    outline: none;
+    margin-top: 4px;
+  }
+  .nudge { color: var(--cp-text-soft); font-size: 12px; line-height: 1.45; margin: -4px 0 10px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--cp-surface-soft);
+    color: var(--cp-text-muted);
+    border-radius: 999px;
+    padding: 5px 11px;
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
   #s-chat {
     background: var(--cp-bg-elevated);
   }
@@ -624,7 +675,7 @@
         <span class="brand-mark">BMT</span>
         <div>
           <h1>Buddy Mini Transformer</h1>
-          <p>Five characters. Pick one and start talking.</p>
+          <p>Six characters. Pick one and start talking.</p>
         </div>
       </div>
     </header>
@@ -656,6 +707,7 @@
       <input type="range" id="humourSlider" min="0" max="100" step="5" value="60" aria-label="How hard Wit roasts you">
       <span class="humour-output" id="humourOutput">🙂 Balanced</span>
     </div>
+    <div class="modes" id="modeBar" hidden></div>
     <div class="thread" id="thread"></div>
     <form class="bar" id="form">
       <input id="msg" placeholder="Message" autocomplete="off">
@@ -673,6 +725,17 @@
     <div class="warn" id="buildWarn"></div>
     <div class="btns"><button class="no" id="buildSkip">Skip</button><button class="ok" id="buildOk">Save</button></div>
   </dialog>
+  <dialog id="birthDlg">
+    <h3>Pandit ji needs your janm details</h3>
+    <p>These stay on this device. The chart is worked out right here in your browser.</p>
+    <label>Date of birth<input id="b-date" type="date" required></label>
+    <label>Time of birth<input id="b-time" type="time"></label>
+    <div class="nudge">Time pata nahi? Leave it blank — Pandit ji will read from Chandra and dasha instead of the lagna.</div>
+    <label>City of birth<select id="b-city"></select></label>
+    <div class="warn" id="birthWarn"></div>
+    <div class="btns"><button class="no" id="birthCancel">Cancel</button><button class="ok" id="birthOk">Save</button></div>
+  </dialog>
+
   <dialog id="clearDlg">
     <h3>Clear this chat?</h3>
     <p id="clearMsg">This wipes the conversation from this device. It can't be undone.</p>
@@ -707,6 +770,98 @@ function updateHumour(value){
 }
 $("#humourSlider").oninput = event => updateHumour(event.target.value);
 updateHumour(S.roastLevel);
+
+// ---------- Pandit ji ----------
+// Birth details never leave this device. The chart is computed here and only
+// the derived placements are sent, which the server re-validates before use.
+const CITIES = [
+  ["Delhi",28.6139,77.2090],["Mumbai",19.0760,72.8777],["Bengaluru",12.9716,77.5946],
+  ["Hyderabad",17.3850,78.4867],["Chennai",13.0827,80.2707],["Kolkata",22.5726,88.3639],
+  ["Pune",18.5204,73.8567],["Ahmedabad",23.0225,72.5714],["Jaipur",26.9124,75.7873],
+  ["Lucknow",26.8467,80.9462],["Kanpur",26.4499,80.3319],["Nagpur",21.1458,79.0882],
+  ["Indore",22.7196,75.8577],["Bhopal",23.2599,77.4126],["Patna",25.5941,85.1376],
+  ["Chandigarh",30.7333,76.7794],["Kochi",9.9312,76.2673],["Coimbatore",11.0168,76.9558],
+  ["Visakhapatnam",17.6868,83.2185],["Guwahati",26.1445,91.7362],["Bhubaneswar",20.2961,85.8245],
+  ["Dehradun",30.3165,78.0322],["Ranchi",23.3441,85.3096],["Raipur",21.2514,81.6296],
+  ["Varanasi",25.3176,82.9739],["Amritsar",31.6340,74.8723],["Surat",21.1702,72.8311],
+  ["Ludhiana",30.9010,75.8573],["Agra",27.1767,78.0081],["Nashik",19.9975,73.7898],
+  ["Madurai",9.9252,78.1198],["Jodhpur",26.2389,73.0243],["Thiruvananthapuram",8.5241,76.9366],
+  ["Srinagar",34.0837,74.7973],["Shimla",31.1048,77.1734],["Panaji",15.4909,73.8278],
+];
+const MODES = [
+  ["swabhav","🪔 Swabhav"], ["dasha","🕰️ Dasha"], ["kaam","💼 Kaam"],
+  ["rishtey","❤️ Rishtey"], ["sawaal","💬 Sawaal"],
+];
+S.mode ||= "swabhav";
+let kundliLib = null, chartCache = null;
+
+const loadKundli = () => (kundliLib ||= import("./kundli.js"));
+
+// Only placements travel - never the date, time or city they entered.
+async function buildChart(){
+  if (!S.birth) return null;
+  if (chartCache) return chartCache;
+  const k = await loadKundli();
+  const b = S.birth;
+  const timeKnown = b.hour !== null && b.hour !== undefined;
+  const c = k.computeKundli({
+    year: b.year, month: b.month, day: b.day,
+    hour: timeKnown ? b.hour : undefined, minute: timeKnown ? b.minute : undefined,
+    tz: 5.5, latitude: b.lat, longitude: b.lon, unknownTime: !timeKnown,
+  });
+  const planets = {}; let boundary = false;
+  for (const [name, p] of Object.entries(c.planets)) {
+    planets[name] = { rashi: p.rashi.name, nakshatra: p.nakshatra.name, retrograde: !!p.retrograde };
+    if (timeKnown) planets[name].bhava = p.bhava;
+    if (p.rashi.boundary) boundary = true;
+  }
+  const nowJD = Date.now() / 86400000 + 2440587.5;
+  const i = c.dasha.periods.findIndex(p => nowJD >= p.startJD && nowJD < p.endJD);
+  const cur = c.dasha.periods[i], nxt = c.dasha.periods[i + 1];
+  chartCache = {
+    timeKnown, planets, boundary,
+    lagnaRashi: timeKnown ? c.lagna.rashi.name : null,
+    lagnaNakshatra: timeKnown ? c.lagna.nakshatra.name : null,
+    dasha: cur ? { lord: cur.lord, startYear: cur.start.year, endYear: cur.end.year,
+                   nextLord: nxt?.lord ?? null, nextEndYear: nxt?.end.year ?? null } : null,
+  };
+  return chartCache;
+}
+
+function drawModes(){
+  const bar = $("#modeBar");
+  bar.innerHTML = MODES.map(([id, label]) =>
+    `<button type="button" class="mode" data-mode="${id}" aria-pressed="${S.mode === id}">${label}</button>`).join("");
+  bar.querySelectorAll(".mode").forEach(button => {
+    button.onclick = () => { S.mode = button.dataset.mode; put(); drawModes(); $("#msg").focus(); };
+  });
+}
+
+function openBirth(){
+  const b = S.birth;
+  $("#b-city").innerHTML = CITIES.map(([n]) => `<option${b && b.city === n ? " selected" : ""}>${n}</option>`).join("");
+  $("#b-date").value = b ? `${b.year}-${String(b.month).padStart(2,"0")}-${String(b.day).padStart(2,"0")}` : "";
+  $("#b-time").value = b && b.hour !== null ? `${String(b.hour).padStart(2,"0")}:${String(b.minute).padStart(2,"0")}` : "";
+  $("#birthWarn").style.display = "none";
+  $("#birthDlg").showModal();
+}
+
+$("#birthCancel").onclick = () => { $("#birthDlg").close(); if (!S.birth) drawHome(); };
+$("#birthOk").onclick = async () => {
+  const warn = t => { $("#birthWarn").textContent = t; $("#birthWarn").style.display = "block"; };
+  const d = $("#b-date").value;
+  if (!d) return warn("Janm tithi toh chahiye.");
+  const [year, month, day] = d.split("-").map(Number);
+  if (year < 1900 || year > 2050) return warn("Year 1900 se 2050 ke beech hona chahiye.");
+  const t = $("#b-time").value;
+  const [hour, minute] = t ? t.split(":").map(Number) : [null, null];
+  const city = CITIES.find(c => c[0] === $("#b-city").value) || CITIES[0];
+  S.birth = { year, month, day, hour, minute, city: city[0], lat: city[1], lon: city[2] };
+  chartCache = null; put();
+  $("#birthDlg").close();
+  try { await buildChart(); } catch (e) { S.birth = null; put(); return warn("Chart nahi ban paaya: " + e.message); }
+  openChat("pandit");
+};
 
 let screen = "s-home";
 const show = (id, push = true) => {
@@ -744,6 +899,7 @@ function drawHome(push = true){
 // ---------- naming ----------
 function start(id){
   const c = CAST.find(x => x.id === id);
+  if (c?.needsChart && !S.birth) { openBirth(); return; }
   if (S.chats[id]) return openChat(id);
   S.chats[id] = { name: c.name, log: [], unseen: false, when: "now", custom: {} };
   put(); openChat(id);
@@ -784,14 +940,17 @@ $("#buildOk").onclick = async e => {
 // ---------- chat ----------
 function openChat(id){
   cur = CAST.find(c => c.id === id);
-  const st = S.chats[id];
+  const st = S.chats[id] ||= { name: cur.name, log: [], unseen: false, when: "now", custom: {} };
   st.unseen = false; put();
   $("#cAv").outerHTML = av(cur).replace('class="av"', 'class="av" id="cAv"');
   $("#cName").textContent = st.name;
   $("#cTag").textContent = cur.tag;
-  $("#renameBtn").hidden = !["naina", "neil"].includes(id);
+  $("#renameBtn").hidden = !["naina", "neil", "pandit"].includes(id);
+  $("#renameBtn").textContent = id === "pandit" ? "Janm" : "Edit";
   $("#clearBtn").hidden = !st.log.length;
   $("#humourBox").hidden = id !== "wit";
+  $("#modeBar").hidden = !cur.needsChart;
+  if (cur.needsChart) drawModes();
   const t = $("#thread");
   const starters = !st.log.length && cur.starters?.length
     ? `<div class="starters" id="starters">
@@ -799,7 +958,10 @@ function openChat(id){
         ${cur.starters.map((_, i) => `<button type="button" class="starter" data-index="${i}">${esc(cur.starters[i])}</button>`).join("")}
       </div>`
     : "";
-  t.innerHTML = `<div class="intro"><b>${st.name}</b>${cur.blurb}</div>` +
+  const chip = cur.needsChart && S.birth
+    ? `<div class="chip">🪔 ${S.birth.day}/${S.birth.month}/${S.birth.year}${S.birth.hour !== null ? `, ${String(S.birth.hour).padStart(2,"0")}:${String(S.birth.minute).padStart(2,"0")}` : ", time unknown"} · ${esc(S.birth.city)}</div>`
+    : "";
+  t.innerHTML = `<div class="intro"><b>${st.name}</b>${cur.blurb}</div>` + chip +
     starters + st.log.map(m => `<div class="b ${m.role}">${esc(m.text)}</div>`).join("");
   t.querySelectorAll(".starter").forEach(button => {
     button.onclick = () => {
@@ -828,13 +990,16 @@ $("#form").onsubmit = async e => {
       role: item.role === "me" ? "user" : "assistant",
       content: item.text
     }));
+    const chart = cur.needsChart ? await buildChart().catch(() => null) : null;
     const r = await apiFetch("/api/chat", { method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({
         id: cur.id,
         message: text,
         history,
+        user: S.user,
         custom: st.custom || {},
-        roast: S.roastLevel
+        roast: S.roastLevel,
+        ...(cur.needsChart ? { chart, panditMode: S.mode } : {})
       }) });
     const type = r.headers.get("content-type") || "";
     reply = type.includes("application/json")
@@ -850,7 +1015,7 @@ $("#form").onsubmit = async e => {
   $("#send").disabled = false; $("#msg").focus();
 };
 
-$("#renameBtn").onclick = () => openBuilder(cur.id);
+$("#renameBtn").onclick = () => (cur.id === "pandit" ? openBirth() : openBuilder(cur.id));
 $("#chatBack").onclick = () => drawHome();
 
 $("#clearBtn").onclick = () => {
