@@ -789,10 +789,10 @@ const CITIES = [
   ["Srinagar",34.0837,74.7973],["Shimla",31.1048,77.1734],["Panaji",15.4909,73.8278],
 ];
 const MODES = [
-  ["swabhav","🪔 Swabhav"], ["dasha","🕰️ Dasha"], ["kaam","💼 Kaam"],
+  ["aaj","☀️ Aaj"], ["swabhav","🪔 Swabhav"], ["dasha","🕰️ Samay"], ["kaam","💼 Kaam"],
   ["rishtey","❤️ Rishtey"], ["sawaal","💬 Sawaal"],
 ];
-S.mode ||= "swabhav";
+S.mode ||= "aaj";
 // The astrologer shipped briefly as "pandit"; carry any chat from that build over.
 if (S.chats.pandit && !S.chats.dhruv) { S.chats.dhruv = S.chats.pandit; S.chats.dhruv.name = "Dhruv"; }
 delete S.chats.pandit;
@@ -802,9 +802,12 @@ let kundliLib = null, chartCache = null;
 const loadKundli = () => (kundliLib ||= import("./kundli.js"));
 
 // Only placements travel - never the date, time or city they entered.
+// Rebuilt when the day changes, because the transits and the antardasha are
+// what make a reading about now rather than about a decade.
 async function buildChart(){
   if (!S.birth) return null;
-  if (chartCache) return chartCache;
+  const today = new Date().toDateString();
+  if (chartCache && chartCache._day === today) return chartCache;
   const k = await loadKundli();
   const b = S.birth;
   const timeKnown = b.hour !== null && b.hour !== undefined;
@@ -819,15 +822,47 @@ async function buildChart(){
     if (timeKnown) planets[name].bhava = p.bhava;
     if (p.rashi.boundary) boundary = true;
   }
+
+  const now = new Date();
   const nowJD = Date.now() / 86400000 + 2440587.5;
   const i = c.dasha.periods.findIndex(p => nowJD >= p.startJD && nowJD < p.endJD);
-  const cur = c.dasha.periods[i], nxt = c.dasha.periods[i + 1];
+  const maha = c.dasha.periods[i], nxt = c.dasha.periods[i + 1];
+
+  // The sub-period. Turns over every few months, so it is the part that can
+  // honestly describe the phase someone is actually in.
+  let antar = null;
+  if (maha) {
+    const a = k.antardasha(maha).find(x => nowJD >= x.startJD && nowJD < x.endJD);
+    if (a) antar = { lord: a.lord, startYear: a.start.year, startMonth: a.start.month,
+                     endYear: a.end.year, endMonth: a.end.month };
+  }
+
+  // Gochar. Houses are counted from the natal Chandra, which is the frame
+  // ordinary daily readings use, so it still works without a birth time.
+  const gochar = k.computeKundli({
+    year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate(),
+    hour: now.getHours(), minute: now.getMinutes(),
+    tz: -now.getTimezoneOffset() / 60, latitude: b.lat, longitude: b.lon,
+  });
+  const natalMoon = c.planets.Chandra.rashi.index;
+  const houseFrom = idx => ((idx - natalMoon + 12) % 12) + 1;
+  const transits = {};
+  for (const g of ["Chandra", "Surya", "Mangala", "Budha", "Guru", "Shukra", "Shani"]) {
+    const t = gochar.planets[g];
+    transits[g] = { rashi: t.rashi.name, house: houseFrom(t.rashi.index), retrograde: !!t.retrograde };
+  }
+  transits.moonNakshatra = gochar.planets.Chandra.nakshatra.name;
+
   chartCache = {
+    _day: today,
     timeKnown, planets, boundary,
     lagnaRashi: timeKnown ? c.lagna.rashi.name : null,
     lagnaNakshatra: timeKnown ? c.lagna.nakshatra.name : null,
-    dasha: cur ? { lord: cur.lord, startYear: cur.start.year, endYear: cur.end.year,
-                   nextLord: nxt?.lord ?? null, nextEndYear: nxt?.end.year ?? null } : null,
+    moonRashi: c.planets.Chandra.rashi.name,
+    dasha: maha ? { lord: maha.lord, startYear: maha.start.year, endYear: maha.end.year,
+                    nextLord: nxt?.lord ?? null, nextEndYear: nxt?.end.year ?? null } : null,
+    antardasha: antar,
+    transits,
   };
   return chartCache;
 }
@@ -970,7 +1005,7 @@ function openChat(id){
   t.querySelectorAll(".starter").forEach(button => {
     button.onclick = () => {
       $("#msg").value = cur.starters[Number(button.dataset.index)];
-      $("#msg").focus();
+      $("#form").requestSubmit();
     };
   });
   show("s-chat"); t.scrollTop = t.scrollHeight;
