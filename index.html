@@ -753,11 +753,11 @@
     <div class="btns"><button class="no" id="buildSkip">Skip</button><button class="ok" id="buildOk">Save</button></div>
   </dialog>
   <dialog id="birthDlg">
-    <h3>Sage needs your janm details</h3>
+    <h3>Sage needs your birth details</h3>
     <p>These stay on this device. The chart is worked out right here in your browser.</p>
     <label>Date of birth<input id="b-date" type="date" required></label>
     <label>Time of birth<input id="b-time" type="time"></label>
-    <div class="nudge">Time pata nahi? Leave it blank — Sage will read from Chandra and dasha instead of the lagna.</div>
+    <div class="nudge">Don't know the time? Leave it blank — Sage will read from the Moon instead. Slightly less detail, still useful.</div>
     <label>City of birth<select id="b-city"></select></label>
     <div class="warn" id="birthWarn"></div>
     <div class="btns"><button class="no" id="birthCancel">Cancel</button><button class="ok" id="birthOk">Save</button></div>
@@ -816,10 +816,11 @@ const CITIES = [
   ["Srinagar",34.0837,74.7973],["Shimla",31.1048,77.1734],["Panaji",15.4909,73.8278],
 ];
 const MODES = [
-  ["aaj","☀️ Aaj"], ["swabhav","🪔 Swabhav"], ["dasha","🕰️ Samay"], ["kaam","💼 Kaam"],
-  ["rishtey","❤️ Rishtey"], ["sawaal","💬 Sawaal"],
+  ["today","☀️ Today"], ["you","🪞 You"], ["timing","🕰️ Timing"], ["work","💼 Work"],
+  ["love","❤️ Love"], ["ask","💬 Ask"],
 ];
-S.mode ||= "aaj";
+S.mode ||= "today";
+if (!MODES.some(([m]) => m === S.mode)) S.mode = "today";   // old Hindi mode keys
 // Characters have been renamed once already; carry old chats across so nobody
 // loses a conversation to a rename. Chained so a pandit chat lands on sage.
 for (const [was, now, label] of [["pandit","dhruv","Sage"], ["dhruv","sage","Sage"],
@@ -920,16 +921,16 @@ $("#birthCancel").onclick = () => { $("#birthDlg").close(); if (!S.birth) drawHo
 $("#birthOk").onclick = async () => {
   const warn = t => { $("#birthWarn").textContent = t; $("#birthWarn").style.display = "block"; };
   const d = $("#b-date").value;
-  if (!d) return warn("Janm tithi toh chahiye.");
+  if (!d) return warn("Date of birth is needed.");
   const [year, month, day] = d.split("-").map(Number);
-  if (year < 1900 || year > 2050) return warn("Year 1900 se 2050 ke beech hona chahiye.");
+  if (year < 1900 || year > 2050) return warn("Year must be between 1900 and 2050.");
   const t = $("#b-time").value;
   const [hour, minute] = t ? t.split(":").map(Number) : [null, null];
   const city = CITIES.find(c => c[0] === $("#b-city").value) || CITIES[0];
   S.birth = { year, month, day, hour, minute, city: city[0], lat: city[1], lon: city[2] };
   chartCache = null; put();
   $("#birthDlg").close();
-  try { await buildChart(); } catch (e) { S.birth = null; put(); return warn("Chart nahi ban paaya: " + e.message); }
+  try { await buildChart(); } catch (e) { S.birth = null; put(); return warn("Could not work out the chart: " + e.message); }
   openChat("sage");
 };
 
@@ -1034,7 +1035,7 @@ function openChat(id){
   $("#cName").textContent = st.name;
   $("#cTag").textContent = cur.tag;
   $("#renameBtn").hidden = !["spark", "anchor", "sage"].includes(id);
-  $("#renameBtn").textContent = id === "sage" ? "Janm" : "Edit";
+  $("#renameBtn").textContent = id === "sage" ? "Birth" : "Edit";
   $("#clearBtn").hidden = !st.log.length;
   $("#humourBox").hidden = id !== "wit";
   $("#modeBar").hidden = !cur.needsChart;
