@@ -267,9 +267,24 @@
   }
   .cards {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
   }
+  .tool-card { min-height: 0; }
+  .tool-av {
+    background: var(--cp-surface-soft);
+    color: var(--cp-text);
+    font-size: 22px;
+    display: grid;
+    place-items: center;
+  }
+  .board-frame {
+    flex: 1;
+    width: 100%;
+    border: 0;
+    background: #f4f5fa;
+  }
+
   .mark {
     text-align: center;
     color: var(--cp-border);
@@ -691,6 +706,18 @@
     <div class="mark">Assistant can be imperfect. Have feedback? <a href="https://www.linkedin.com/in/aakash-varshney-6ab9911b/" target="_blank" rel="noopener">Message me on LinkedIn</a>.</div>
   </section>
 
+  <!-- BOARD -->
+  <section class="screen off" id="s-board">
+    <div class="cbar">
+      <button class="back" id="boardBack">‹</button>
+      <div><b>Task Board</b><small>Saved in this browser only</small></div>
+      <div class="cbar-actions">
+        <a class="rename" id="boardOpen" href="board/" target="_blank" rel="noopener">Full page</a>
+      </div>
+    </div>
+    <iframe id="boardFrame" class="board-frame" title="Personal Task Board" loading="lazy"></iframe>
+  </section>
+
   <!-- CHAT -->
   <section class="screen off" id="s-chat">
     <div class="cbar">
@@ -908,7 +935,7 @@ $("#birthOk").onclick = async () => {
 
 let screen = "s-home";
 const show = (id, push = true) => {
-  ["s-home","s-chat"].forEach(s => $("#"+s).classList.toggle("off", s !== id));
+  ["s-home","s-chat","s-board"].forEach(s => $("#"+s).classList.toggle("off", s !== id));
   if (push && id !== screen) history.pushState({ id }, "");
   screen = id;
 };
@@ -930,13 +957,31 @@ function drawHome(push = true){
       <span class="card-action">${st && st.log.length ? "Resume" : "Talk"}<span class="arrow">→</span></span>
       ${st && st.unseen ? '<span class="dot"></span>' : ''}
     </button>`;
-  }).join("");
+  }).join("") + `<button type="button" class="ccard tool-card" data-tool="board">
+      <span class="av tool-av">🗂️</span>
+      <div class="meta">
+        <b>Task Board</b>
+        <div class="tag">To do, in progress, done</div>
+        <div class="blurb">A small board that lives in this browser. Nothing leaves your device.</div>
+      </div>
+      <span class="card-action">Open<span class="arrow">→</span></span>
+    </button>`;
 
   $("#chats").querySelectorAll(".ccard").forEach(card => {
+    if (card.dataset.tool === "board") { card.onclick = openBoard; return; }
     const c = CAST.find(item => item.id === card.dataset.id);
     card.onclick = () => start(c.id);
   });
   show("s-home", push);
+}
+
+// The board is served from this same origin on purpose. A third-party frame
+// gets its storage partitioned, or blocked outright in Safari, and the tasks
+// would quietly fail to save.
+function openBoard(){
+  const f = $("#boardFrame");
+  if (!f.getAttribute("src")) f.setAttribute("src", "board/");
+  show("s-board");
 }
 
 // ---------- naming ----------
@@ -1060,6 +1105,7 @@ $("#form").onsubmit = async e => {
 
 $("#renameBtn").onclick = () => (cur.id === "sage" ? openBirth() : openBuilder(cur.id));
 $("#chatBack").onclick = () => drawHome();
+$("#boardBack").onclick = () => drawHome();
 
 $("#clearBtn").onclick = () => {
   if (!cur || !S.chats[cur.id].log.length) return;

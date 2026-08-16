@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>How the Personal Task Board Was Built</title>
+    <link rel="icon" href="data:,">
+    <script>
+      (() => {
+        const param = new URLSearchParams(window.location.search).get("scoutTheme");
+        const theme =
+          param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --cp-bg: #f7f4ef;
+        --cp-bg-elevated: #fcfbf8;
+        --cp-surface: #ffffff;
+        --cp-surface-soft: #f5f5f5;
+        --cp-border: #dedede;
+        --cp-border-strong: #919191;
+        --cp-text: #242424;
+        --cp-text-muted: #5c5c5c;
+        --cp-text-soft: #6f6f6f;
+        --cp-accent: #b11f4b;
+        --cp-accent-hover: #9a1a41;
+        --cp-accent-soft: rgba(177, 31, 75, 0.08);
+        --cp-accent-fg: #ffffff;
+        --cp-success: #16a34a;
+        --cp-danger: #dc2626;
+        --cp-warning: #f59e0b;
+        --cp-link: #0078d4;
+        --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+        --cp-overlay: rgba(255, 255, 255, 0.8);
+        --cp-panel: rgba(255, 255, 255, 0.86);
+        --cp-panel-strong: rgba(255, 255, 255, 0.96);
+        --cp-sheen: rgba(255, 255, 255, 0.55);
+        --cp-highlight: rgba(177, 31, 75, 0.12);
+      }
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --cp-bg: #3d3b3a;
+        --cp-bg-elevated: #343231;
+        --cp-surface: #292929;
+        --cp-surface-soft: #2e2e2e;
+        --cp-border: #474747;
+        --cp-border-strong: #5f5f5f;
+        --cp-text: #dedede;
+        --cp-text-muted: #919191;
+        --cp-text-soft: #b0b0b0;
+        --cp-accent: #fd8ea1;
+        --cp-accent-hover: #fb7b91;
+        --cp-accent-soft: rgba(253, 142, 161, 0.14);
+        --cp-accent-fg: #1a1a1a;
+        --cp-success: #4ade80;
+        --cp-danger: #f87171;
+        --cp-warning: #fbbf24;
+        --cp-link: #4da6ff;
+        --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+        --cp-overlay: rgba(41, 41, 41, 0.88);
+        --cp-panel: rgba(41, 41, 41, 0.72);
+        --cp-panel-strong: rgba(41, 41, 41, 0.96);
+        --cp-sheen: rgba(255, 255, 255, 0.04);
+        --cp-highlight: rgba(253, 142, 161, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-width: 320px;
+        margin: 0;
+        color: var(--cp-text);
+        background: var(--cp-bg);
+        font-family:
+          "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont,
+          sans-serif;
+        line-height: 1.6;
+      }
+
+      a {
+        color: var(--cp-link);
+        text-underline-offset: 0.2em;
+      }
+
+      a:hover {
+        color: var(--cp-accent-hover);
+      }
+
+      a:focus-visible {
+        outline: 3px solid var(--cp-accent);
+        outline-offset: 3px;
+      }
+
+      code {
+        padding: 0.12rem 0.3rem;
+        border-radius: 0.3rem;
+        color: var(--cp-text);
+        background: var(--cp-surface-soft);
+        font-family: Consolas, "Courier New", Courier, monospace;
+        font-size: 0.92em;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid var(--cp-border);
+        background: var(--cp-panel-strong);
+      }
+
+      .topbar-inner,
+      .page {
+        width: min(100% - 2rem, 76rem);
+        margin: 0 auto;
+      }
+
+      .topbar-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 3.5rem;
+      }
+
+      .brand {
+        color: var(--cp-text);
+        font-weight: 750;
+        text-decoration: none;
+      }
+
+      .topbar-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        font-size: 0.92rem;
+      }
+
+      .page {
+        padding: 3rem 0 5rem;
+      }
+
+      .hero,
+      .gate,
+      .artifact-panel {
+        border: 1px solid var(--cp-border);
+        border-radius: 16px;
+        background: var(--cp-surface);
+      }
+
+      .hero {
+        padding: clamp(1.5rem, 5vw, 3.5rem);
+        box-shadow: var(--cp-shadow);
+      }
+
+      .eyebrow {
+        margin: 0 0 0.75rem;
+        color: var(--cp-accent);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        max-width: 15ch;
+        margin-bottom: 1rem;
+        font-size: clamp(2.25rem, 7vw, 5rem);
+        line-height: 1;
+        letter-spacing: -0.045em;
+      }
+
+      h2 {
+        margin-bottom: 0.75rem;
+        font-size: clamp(1.45rem, 3vw, 2rem);
+        line-height: 1.2;
+      }
+
+      h3 {
+        margin-bottom: 0.5rem;
+        font-size: 1.05rem;
+      }
+
+      .hero-copy {
+        max-width: 47rem;
+        margin-bottom: 1.5rem;
+        color: var(--cp-text-muted);
+        font-size: 1.1rem;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        min-height: 2.75rem;
+        padding: 0.65rem 1rem;
+        border: 1px solid var(--cp-accent);
+        border-radius: 0.625rem;
+        color: var(--cp-accent-fg);
+        background: var(--cp-accent);
+        font-weight: 750;
+        text-decoration: none;
+      }
+
+      .button:hover {
+        color: var(--cp-accent-fg);
+        background: var(--cp-accent-hover);
+      }
+
+      .button-secondary {
+        color: var(--cp-text);
+        background: var(--cp-surface);
+      }
+
+      .button-secondary:hover {
+        color: var(--cp-text);
+        background: var(--cp-accent-soft);
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin: 1.25rem 0 0;
+      }
+
+      .metric {
+        padding: 1rem;
+        border: 1px solid var(--cp-border);
+        border-radius: 0.625rem;
+        background: var(--cp-bg-elevated);
+      }
+
+      .metric-value {
+        display: block;
+        color: var(--cp-accent);
+        font-size: 1.65rem;
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .metric-label {
+        display: block;
+        margin-top: 0.35rem;
+        color: var(--cp-text-muted);
+        font-size: 0.82rem;
+      }
+
+      .gate-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 2rem 0;
+        padding: 1rem;
+        border: 1px solid var(--cp-border);
+        border-radius: 0.625rem;
+        background: var(--cp-bg-elevated);
+      }
+
+      .gate-nav a {
+        padding: 0.4rem 0.65rem;
+        border-radius: 0.625rem;
+        color: var(--cp-text);
+        background: var(--cp-surface);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .gate-nav a:hover {
+        background: var(--cp-accent-soft);
+      }
+
+      .gate-list {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .gate {
+        scroll-margin-top: 5rem;
+        padding: clamp(1.25rem, 4vw, 2rem);
+      }
+
+      .gate-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+      }
+
+      .gate-number {
+        margin: 0 0 0.25rem;
+        color: var(--cp-accent);
+        font-family: Consolas, "Courier New", Courier, monospace;
+        font-size: 0.82rem;
+        font-weight: 800;
+      }
+
+      .status {
+        flex: 0 0 auto;
+        padding: 0.28rem 0.55rem;
+        border: 1px solid var(--cp-border);
+        border-radius: 0.625rem;
+        color: var(--cp-success);
+        background: var(--cp-surface-soft);
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .gate-summary {
+        max-width: 55rem;
+        color: var(--cp-text-muted);
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        margin: 1rem 0;
+      }
+
+      .card {
+        padding: 1rem;
+        border: 1px solid var(--cp-border);
+        border-radius: 16px;
+        background: var(--cp-bg-elevated);
+      }
+
+      .card p:last-child,
+      .gate p:last-child {
+        margin-bottom: 0;
+      }
+
+      .decision-list {
+        margin: 0;
+        padding-left: 1.25rem;
+      }
+
+      .decision-list li + li {
+        margin-top: 0.4rem;
+      }
+
+      .artifact-link {
+        display: inline-block;
+        margin-top: 1rem;
+        font-weight: 750;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.5rem;
+        margin: 1rem 0;
+      }
+
+      .flow-step {
+        padding: 0.8rem;
+        border: 1px solid var(--cp-border);
+        border-radius: 0.625rem;
+        background: var(--cp-accent-soft);
+        font-size: 0.88rem;
+        font-weight: 700;
+        text-align: center;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        margin-top: 1rem;
+        border: 1px solid var(--cp-border);
+        border-radius: 0.625rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--cp-surface);
+        font-size: 0.9rem;
+      }
+
+      th,
+      td {
+        padding: 0.7rem 0.8rem;
+        border-bottom: 1px solid var(--cp-border);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--cp-text-muted);
+        background: var(--cp-surface-soft);
+        font-size: 0.75rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .artifact-panel {
+        margin-top: 2rem;
+        padding: clamp(1.25rem, 4vw, 2rem);
+      }
+
+      .artifact-panel p {
+        color: var(--cp-text-muted);
+      }
+
+      footer {
+        padding-top: 2rem;
+        color: var(--cp-text-muted);
+        font-size: 0.9rem;
+        text-align: center;
+      }
+
+      @media (max-width: 60rem) {
+        .metrics {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .cards {
+          grid-template-columns: 1fr;
+        }
+
+        .flow {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 40rem) {
+        .topbar-inner {
+          align-items: flex-start;
+          flex-direction: column;
+          padding: 0.75rem 0;
+        }
+
+        .page {
+          padding-top: 1.5rem;
+        }
+
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .gate-header {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="topbar" aria-label="Primary">
+      <div class="topbar-inner">
+        <a class="brand" href="index.html">Personal Task Board</a>
+        <div class="topbar-links">
+          <a href="index.html">Live board</a>
+          <a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board">GitHub source</a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="page">
+      <header class="hero">
+        <p class="eyebrow">Public build record</p>
+        <h1>How this was built: G0 to G5</h1>
+        <p class="hero-copy">
+          A complete, public record of how a small browser app moved from a
+          problem statement to verified code. Every gate produced an artifact,
+          every behavior task followed test-first development, and every
+          approval was recorded before the next gate began.
+        </p>
+        <div class="hero-actions">
+          <a class="button" href="index.html">Open the live board</a>
+          <a
+            target="_blank" rel="noopener" class="button button-secondary"
+            href="https://github.com/civilaakash/personal-task-board"
+          >
+            Browse the repository
+          </a>
+        </div>
+
+        <div class="metrics" aria-label="Build metrics">
+          <div class="metric">
+            <span class="metric-value">6</span>
+            <span class="metric-label">approved gates</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value">10</span>
+            <span class="metric-label">implementation tasks</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value">32</span>
+            <span class="metric-label">automated tests</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value">9</span>
+            <span class="metric-label">browser scenarios</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value">0</span>
+            <span class="metric-label">dependencies</span>
+          </div>
+        </div>
+      </header>
+
+      <nav class="gate-nav" aria-label="Development gates">
+        <a href="#g0">G0 Discovery</a>
+        <a href="#g1">G1 Constitution</a>
+        <a href="#g2">G2 Specification</a>
+        <a href="#g3">G3 Design + Plan</a>
+        <a href="#g4">G4 Implementation</a>
+        <a href="#g5">G5 Verification</a>
+      </nav>
+
+      <div class="gate-list">
+        <section class="gate" id="g0">
+          <div class="gate-header">
+            <div>
+              <p class="gate-number">G0</p>
+              <h2>Discovery</h2>
+            </div>
+            <span class="status">Approved</span>
+          </div>
+          <p class="gate-summary">
+            Start with the problem, user, smallest useful scope, measurable
+            success, constraints, and explicit non-goals before discussing
+            implementation.
+          </p>
+          <div class="cards">
+            <article class="card">
+              <h3>Problem</h3>
+              <p>A simple visual way to manage personal tasks without accounts, servers, or real work data.</p>
+            </article>
+            <article class="card">
+              <h3>MVP</h3>
+              <p>Add, move, delete, and automatically preserve tasks after refresh.</p>
+            </article>
+            <article class="card">
+              <h3>Non-goals</h3>
+              <p>No editing, dates, priorities, collaboration, notifications, or cloud sync.</p>
+            </article>
+          </div>
+          <a
+            target="_blank" rel="noopener" class="artifact-link"
+            href="https://github.com/civilaakash/personal-task-board/blob/main/discovery/personal-task-board-discovery.md"
+          >
+            Read the G0 discovery.md
+          </a>
+        </section>
+
+        <section class="gate" id="g1">
+          <div class="gate-header">
+            <div>
+              <p class="gate-number">G1</p>
+              <h2>Constitution</h2>
+            </div>
+            <span class="status">Approved</span>
+          </div>
+          <p class="gate-summary">
+            Lock the engineering rules before code exists. These rules become
+            constraints for every later decision and implementation task.
+          </p>
+          <ul class="decision-list">
+            <li>Synthetic, local-only data; no secrets or company work data.</li>
+            <li>Plain HTML, CSS, and JavaScript with no external dependencies.</li>
+            <li>Test-first task behavior and browser inspection for presentation.</li>
+            <li>Keyboard access, visible errors, and no silent failures.</li>
+            <li>No gate begins before its predecessor is approved.</li>
+          </ul>
+          <a
+            target="_blank" rel="noopener" class="artifact-link"
+            href="https://github.com/civilaakash/personal-task-board/blob/main/CONSTITUTION.md"
+          >
+            Read the G1 CONSTITUTION.md
+          </a>
+        </section>
+
+        <section class="gate" id="g2">
+          <div class="gate-header">
+            <div>
+              <p class="gate-number">G2</p>
+              <h2>Specification</h2>
+            </div>
+            <span class="status">Approved</span>
+          </div>
+          <p class="gate-summary">
+            Convert the MVP into a technology-independent behavior contract:
+            four user stories, twelve functional requirements, nine acceptance
+            scenarios, constraints, and explicit exclusions.
+          </p>
+          <div class="cards">
+            <article class="card">
+              <h3>Input contract</h3>
+              <p>Trim titles, require 1 to 100 characters, and reject invalid input visibly.</p>
+            </article>
+            <article class="card">
+              <h3>Movement contract</h3>
+              <p>Start, Back, Complete, and Reopen expose only valid status transitions.</p>
+            </article>
+            <article class="card">
+              <h3>Persistence contract</h3>
+              <p>Save every successful mutation, restore on load, and surface storage failures.</p>
+            </article>
+          </div>
+          <a
+            target="_blank" rel="noopener" class="artifact-link"
+            href="https://github.com/civilaakash/personal-task-board/blob/main/specs/personal-task-board/spec.md"
+          >
+            Read the G2 spec.md
+          </a>
+        </section>
+
+        <section class="gate" id="g3">
+          <div class="gate-header">
+            <div>
+              <p class="gate-number">G3</p>
+              <h2>Architecture, Design, and Plan</h2>
+            </div>
+            <span class="status">Approved</span>
+          </div>
+          <p class="gate-summary">
+            G3 was deliberately split into three ordered artifacts. Design was
+            approved before planning to prevent implementation tasks from being
+            written against an unstable architecture.
+          </p>
+          <div class="cards">
+            <article class="card">
+              <h3>G3A: ADR</h3>
+              <p>Functional core, one versioned storage document, fail-safe persistence, and native ES modules.</p>
+              <a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/blob/main/specs/personal-task-board/adr.md">Read adr.md</a>
+            </article>
+            <article class="card">
+              <h3>G3B: Design</h3>
+              <p>Files, module contracts, transitions, data flow, errors, accessibility, tests, and requirement traceability.</p>
+              <a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/blob/main/specs/personal-task-board/design.md">Read design.md</a>
+            </article>
+            <article class="card">
+              <h3>G3C: Plan</h3>
+              <p>Ten sequential tasks with red-green evidence, dependency order, and exact commit boundaries.</p>
+              <a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/blob/main/specs/personal-task-board/plan.md">Read plan.md</a>
+            </article>
+          </div>
+        </section>
+
+        <section class="gate" id="g4">
+          <div class="gate-header">
+            <div>
+              <p class="gate-number">G4</p>
+              <h2>Implementation</h2>
+            </div>
+            <span class="status">Approved</span>
+          </div>
+          <p class="gate-summary">
+            Implementation followed ten sequential tasks. Behavior work began
+            with a failing test, moved to the smallest passing implementation,
+            reran the complete suite, reviewed the diff, and committed only that
+            task.
+          </p>
+          <div class="flow" aria-label="Test-first implementation cycle">
+            <div class="flow-step">1. Write failing test</div>
+            <div class="flow-step">2. Observe RED</div>
+            <div class="flow-step">3. Implement minimum</div>
+            <div class="flow-step">4. Verify GREEN</div>
+            <div class="flow-step">5. Review and commit</div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Phase</th>
+                  <th>Task</th>
+                  <th>Outcome</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>1</td><td>1.1</td><td>Dependency-free project scaffold</td></tr>
+                <tr><td>2</td><td>2.1</td><td>Title validation and adding</td></tr>
+                <tr><td>2</td><td>2.2</td><td>Safe status transitions</td></tr>
+                <tr><td>2</td><td>2.3</td><td>Immutable task deletion</td></tr>
+                <tr><td>3</td><td>3.1</td><td>Validated storage loading</td></tr>
+                <tr><td>3</td><td>3.2</td><td>Atomic save and write failures</td></tr>
+                <tr><td>4</td><td>4.1</td><td>Accessible responsive shell</td></tr>
+                <tr><td>4</td><td>4.2</td><td>Startup, rendering, and creation</td></tr>
+                <tr><td>4</td><td>4.3</td><td>Movement and confirmed deletion</td></tr>
+                <tr><td>4</td><td>4.4</td><td>Fail-safe final integration</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            The exact tests are public in
+            <a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/tree/main/test"><code>test/</code></a>.
+          </p>
+        </section>
+
+        <section class="gate" id="g5">
+          <div class="gate-header">
+            <div>
+              <p class="gate-number">G5</p>
+              <h2>Verification</h2>
+            </div>
+            <span class="status">Approved</span>
+          </div>
+          <p class="gate-summary">
+            Verification repeated the tests and browser scenarios independently,
+            injected load and save failures, inspected responsive and keyboard
+            behavior, reviewed network and console output, repaired defects, and
+            updated the documentation.
+          </p>
+          <div class="cards">
+            <article class="card">
+              <h3>Automated</h3>
+              <p>32 tests passed, JavaScript parsed, whitespace passed, and dependencies remained zero.</p>
+            </article>
+            <article class="card">
+              <h3>Browser</h3>
+              <p>All nine scenarios passed with keyboard use, responsive layout, clean console, and local-only requests.</p>
+            </article>
+            <article class="card">
+              <h3>Failure injection</h3>
+              <p>Corrupt loads and failed saves produced visible errors without overwriting the last valid board.</p>
+            </article>
+          </div>
+          <a
+            target="_blank" rel="noopener" class="artifact-link"
+            href="https://github.com/civilaakash/personal-task-board/blob/main/specs/personal-task-board/docs-updated.md"
+          >
+            Read the G5 verification evidence
+          </a>
+        </section>
+      </div>
+
+      <section class="artifact-panel" id="artifacts">
+        <h2>Complete artifact index</h2>
+        <p>
+          The public snapshot mirrors the artifact shape used during the private
+          learning loop, but excludes private commit hashes, session notes, and
+          unrelated files.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Artifact</th>
+                <th>Question it answers</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/blob/main/discovery/personal-task-board-discovery.md">discovery.md</a></td>
+                <td>What problem and smallest useful scope are we solving?</td>
+              </tr>
+              <tr>
+                <td><a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/blob/main/CONSTITUTION.md">CONSTITUTION.md</a></td>
+                <td>Which rules must all later work follow?</td>
+              </tr>
+              <tr>
+                <td><a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/blob/main/specs/personal-task-board/spec.md">spec.md</a></td>
+                <td>What exact user-visible behavior must exist?</td>
+              </tr>
+              <tr>
+                <td><a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/blob/main/specs/personal-task-board/adr.md">adr.md</a></td>
+                <td>Which architecture choices were made and why?</td>
+              </tr>
+              <tr>
+                <td><a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/blob/main/specs/personal-task-board/design.md">design.md</a></td>
+                <td>How do files, modules, data, errors, and tests fit together?</td>
+              </tr>
+              <tr>
+                <td><a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/blob/main/specs/personal-task-board/plan.md">plan.md</a></td>
+                <td>In what safe order should implementation happen?</td>
+              </tr>
+              <tr>
+                <td><a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/tree/main/test">test/</a></td>
+                <td>What automated evidence protects behavior?</td>
+              </tr>
+              <tr>
+                <td><a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/blob/main/specs/personal-task-board/docs-updated.md">docs-updated.md</a></td>
+                <td>What final verification evidence closes the loop?</td>
+              </tr>
+              <tr>
+                <td><a target="_blank" rel="noopener" href="https://github.com/civilaakash/personal-task-board/blob/main/sdd/status.json">status.json</a></td>
+                <td>Which gates and tasks completed, and in what order?</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer>
+        Built with synthetic data, public tools, explicit approvals, and no runtime dependencies.
+      </footer>
+    </main>
+  </body>
+</html>

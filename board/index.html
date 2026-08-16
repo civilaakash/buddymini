@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Personal Task Board</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="page-header">
+        <p class="eyebrow">Local planning</p>
+        <h1>Personal Task Board</h1>
+        <p class="intro">
+          Organize synthetic learning tasks. Everything stays in this browser.
+        </p>
+        <p class="build-link-row">
+          <a class="build-link" href="how-it-was-built.html">
+            See how this was built: G0 to G5
+          </a>
+        </p>
+      </header>
+
+      <form id="task-form" class="task-form" novalidate>
+        <div class="field">
+          <label for="task-title">Task title</label>
+          <input
+            id="task-title"
+            name="task-title"
+            type="text"
+            aria-describedby="title-help form-message"
+            required
+          >
+          <p id="title-help" class="field-help">Use 1 to 100 characters.</p>
+        </div>
+        <button type="submit">Add Task</button>
+      </form>
+
+      <p id="form-message" class="form-message" aria-live="polite"></p>
+      <p id="app-message" class="app-message" role="alert" hidden></p>
+
+      <section class="board" aria-label="Task board">
+        <section class="column" aria-labelledby="todo-heading">
+          <div class="column-header">
+            <h2 id="todo-heading">To Do</h2>
+            <span class="column-count" aria-label="0 To Do tasks">0</span>
+          </div>
+          <ul id="todo-list" class="task-list" aria-label="To Do tasks">
+            <li class="empty-state">No tasks yet.</li>
+          </ul>
+        </section>
+
+        <section class="column" aria-labelledby="in-progress-heading">
+          <div class="column-header">
+            <h2 id="in-progress-heading">In Progress</h2>
+            <span class="column-count" aria-label="0 In Progress tasks">0</span>
+          </div>
+          <ul
+            id="in-progress-list"
+            class="task-list"
+            aria-label="In Progress tasks"
+          >
+            <li class="empty-state">No tasks yet.</li>
+          </ul>
+        </section>
+
+        <section class="column" aria-labelledby="done-heading">
+          <div class="column-header">
+            <h2 id="done-heading">Done</h2>
+            <span class="column-count" aria-label="0 Done tasks">0</span>
+          </div>
+          <ul id="done-list" class="task-list" aria-label="Done tasks">
+            <li class="empty-state">No tasks yet.</li>
+          </ul>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>
