@@ -376,6 +376,53 @@
   .cbar-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
   .rename, .clear { font-size: 13px; padding: 6px; white-space: nowrap; }
   .clear[hidden] { display: none; }
+
+  /* ---- Vibe Check ---- */
+  .vibe-wrap { padding: 18px 16px 60px; max-width: 680px; margin: 0 auto; overflow-y: auto; }
+  .vibe-intro { color: var(--cp-text-muted); font-size: 14.5px; margin: 0 0 14px; line-height: 1.6; }
+  #vibeText {
+    width: 100%; font: inherit; font-size: 15.5px; padding: 12px 14px; border-radius: 12px;
+    border: 1px solid var(--cp-border); background: var(--cp-bg-elevated); color: var(--cp-text); resize: vertical;
+  }
+  #vibeText:focus { outline: 2px solid var(--cp-accent); outline-offset: -1px; }
+  .vibe-actions { display: flex; gap: 9px; flex-wrap: wrap; margin: 12px 0 6px; }
+  .vibe-go, .vibe-alt {
+    font: inherit; font-size: 14.5px; cursor: pointer; padding: 9px 16px; border-radius: 10px;
+    border: 1px solid var(--cp-border-strong); background: var(--cp-surface); color: var(--cp-text);
+  }
+  .vibe-go { background: var(--cp-accent); color: #fff; border-color: var(--cp-accent); font-weight: 600; }
+  .vibe-go:disabled { opacity: .5; cursor: default; }
+  .vibe-top { display: flex; align-items: baseline; gap: 10px; margin: 20px 0 4px; flex-wrap: wrap; }
+  .vibe-top b { font-size: 27px; letter-spacing: -.4px; text-transform: capitalize; }
+  .vibe-top span { color: var(--cp-text-muted); font-size: 14px; }
+  .vrow { display: grid; grid-template-columns: 74px 1fr 48px; align-items: center; gap: 10px; margin: 7px 0; }
+  .vrow i { font-style: normal; font-size: 13.5px; color: var(--cp-text-muted); text-transform: capitalize; }
+  .vbar { height: 9px; border-radius: 99px; background: var(--cp-surface-soft); overflow: hidden; border: 1px solid var(--cp-border); }
+  .vbar > u { display: block; height: 100%; background: var(--cp-border-strong); text-decoration: none; transition: width .3s ease; }
+  .vrow.win .vbar > u { background: var(--cp-accent); }
+  .vrow.win i { color: var(--cp-text); font-weight: 650; }
+  .vrow b { font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; color: var(--cp-text-muted); }
+  .vrow.win b { color: var(--cp-text); }
+  .vwords { margin: 18px 0 0; padding: 13px 15px; border-radius: 12px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); }
+  .vwords h4 { margin: 0 0 4px; font-size: 13.5px; }
+  .vwords p { margin: 0 0 9px; font-size: 12.5px; color: var(--cp-text-muted); line-height: 1.5; }
+  .vw { display: inline-block; margin: 3px 5px 3px 0; padding: 3px 10px; border-radius: 99px; font-size: 13px;
+        background: var(--cp-accent-soft); border: 1px solid var(--cp-accent); }
+  .vibe-foot { margin-top: 22px; font-size: 12.5px; color: var(--cp-text-muted); line-height: 1.6; }
+  .vibe-msg { margin: 16px 0; font-size: 14px; color: var(--cp-text-muted); }
+  .vibe-eval { margin-top: 18px; border: 1px solid var(--cp-border); border-radius: 12px; background: var(--cp-surface-soft); }
+  .vibe-eval summary { cursor: pointer; padding: 12px 15px; font-size: 14.5px; font-weight: 650; list-style: none; }
+  .vibe-eval summary::-webkit-details-marker { display: none; }
+  .vibe-eval summary::after { content: " ▾"; color: var(--cp-text-muted); }
+  .vibe-eval[open] summary::after { content: " ▴"; }
+  .vibe-eval > p, .vibe-eval > table, .vibe-eval > .vibe-links { margin: 0 15px 11px; font-size: 13px; line-height: 1.6; color: var(--cp-text-muted); }
+  .vibe-eval table { width: calc(100% - 30px); border-collapse: collapse; }
+  .vibe-eval td { padding: 5px 0; border-bottom: 1px solid var(--cp-border); }
+  .vibe-eval td:last-child { text-align: right; color: var(--cp-text); }
+  .vibe-eval i { font-style: normal; opacity: .75; }
+  .vibe-eval b { color: var(--cp-text); }
+  .vibe-links a { color: var(--cp-link); text-decoration: none; }
+  .vibe-links a:hover { text-decoration: underline; }
   .cbar .av { width: 39px; height: 39px; font-size: 15px; flex-shrink: 0; }
   .cbar > div:not(.cbar-actions) { min-width: 0; }
   .cbar b { font-size: 16.5px; font-weight: 650; display: block; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -718,6 +765,45 @@
     <iframe id="boardFrame" class="board-frame" title="Personal Task Board" loading="lazy"></iframe>
   </section>
 
+  <!-- VIBE CHECK -->
+  <section class="screen off" id="s-vibe">
+    <div class="cbar">
+      <button class="back" id="vibeBack">‹</button>
+      <span class="av tool-av">🎯</span>
+      <div><b>Vibe Check</b><small>8.3M emotion transformer · runs on your device</small></div>
+    </div>
+    <div class="vibe-wrap">
+      <p class="vibe-intro">Type anything, or pull your last message to Buddy. The model reads it and scores all seven emotions. Nothing leaves this browser.</p>
+      <textarea id="vibeText" rows="3" placeholder="I barely slept and everything went wrong at work."></textarea>
+      <div class="vibe-actions">
+        <button class="vibe-go" id="vibeGo">Check the vibe</button>
+        <button class="vibe-alt" id="vibePull">Use my last Buddy message</button>
+      </div>
+      <div id="vibeOut"></div>
+      <div class="vibe-foot">
+        Built from scratch: 4 layers, 8 heads, 8,297,735 parameters, trained on dair-ai/emotion and GoEmotions.
+        The bars are the model's raw output and always add to 100%.
+      </div>
+
+      <details class="vibe-eval">
+        <summary>How good is this model, really?</summary>
+        <p>Measured on 6,590 test examples the model had never seen. A model that ignored the input and always answered "joy" would score 30.3%, so the number below is roughly 2.3× that floor.</p>
+        <table>
+          <tr><td>Accuracy</td><td><b>70.7%</b></td></tr>
+          <tr><td>Macro-F1 <i>(all 7 emotions counted equally)</i></td><td><b>68.2%</b></td></tr>
+          <tr><td>Always-guess-"joy" baseline</td><td>30.3%</td></tr>
+        </table>
+        <p>It is not uniform. On short tweets it scores <b>87.9%</b>; on longer Reddit-style comments, <b>63.3%</b>. One average hid a 25-point gap.</p>
+        <p><b>Where it fails:</b> anger and neutral get confused with each other (452 errors), and it chases emotional keywords — when the word "surprise" appears it answers surprise 83% of the time although only 50% of those are really surprise. "My team threw me a surprise party" is joy, and it gets it wrong.</p>
+        <p class="vibe-links">
+          <a href="https://huggingface.co/AakashakaAkku/vibe-check-emotion" target="_blank" rel="noopener">Model card and full evaluation on Hugging Face →</a><br>
+          <a href="https://huggingface.co/datasets/dair-ai/emotion" target="_blank" rel="noopener">dair-ai/emotion</a> ·
+          <a href="https://huggingface.co/datasets/google-research-datasets/go_emotions" target="_blank" rel="noopener">GoEmotions</a>
+        </p>
+      </details>
+    </div>
+  </section>
+
   <!-- CHAT -->
   <section class="screen off" id="s-chat">
     <div class="cbar">
@@ -936,7 +1022,7 @@ $("#birthOk").onclick = async () => {
 
 let screen = "s-home";
 const show = (id, push = true) => {
-  ["s-home","s-chat","s-board"].forEach(s => $("#"+s).classList.toggle("off", s !== id));
+  ["s-home","s-chat","s-board","s-vibe"].forEach(s => $("#"+s).classList.toggle("off", s !== id));
   if (push && id !== screen) history.pushState({ id }, "");
   screen = id;
 };
@@ -966,10 +1052,19 @@ function drawHome(push = true){
         <div class="blurb">A small board that lives in this browser. Nothing leaves your device.</div>
       </div>
       <span class="card-action">Open<span class="arrow">→</span></span>
+    </button>` + `<button type="button" class="ccard tool-card" data-tool="vibe">
+      <span class="av tool-av">🎯</span>
+      <div class="meta">
+        <b>Vibe Check</b>
+        <div class="tag">From-scratch emotion model</div>
+        <div class="blurb">Type a sentence and the 8M-parameter transformer scores all seven emotions, on your device.</div>
+      </div>
+      <span class="card-action">Open<span class="arrow">→</span></span>
     </button>`;
 
   $("#chats").querySelectorAll(".ccard").forEach(card => {
     if (card.dataset.tool === "board") { card.onclick = openBoard; return; }
+    if (card.dataset.tool === "vibe") { card.onclick = openVibe; return; }
     const c = CAST.find(item => item.id === card.dataset.id);
     card.onclick = () => start(c.id);
   });
@@ -1104,8 +1199,7 @@ $("#form").onsubmit = async e => {
   $("#send").disabled = false; $("#msg").focus();
 };
 
-$("#renameBtn").onclick = () => (cur.id === "sage" ? openBirth() : openBuilder(cur.id));
-$("#chatBack").onclick = () => drawHome();
+$("#renameBtn").onclick = () => (cur.id === "sage" ? openBirth() : openBuilder(cur.id));$("#chatBack").onclick = () => drawHome();
 $("#boardBack").onclick = () => drawHome();
 
 $("#clearBtn").onclick = () => {
@@ -1125,5 +1219,77 @@ apiFetch("/api/cast").then(r => r.json()).then(d => {
   CAST = d;
   drawHome();
 });
+
+// ---------- Vibe Check ----------
+// Shows the model's raw seven-way output rather than analyzeDay's summary,
+// because this tab exists to show what the model actually predicts.
+const VIBE_STOP = new Set(("a an and or but so then than as at by for from in into of on to up out if is am are was "+
+  "were be been being this that these those it its i im you your my me we they he she his her their our do did "+
+  "does have has had will would can could should just really very too about get got there here what when how why "+
+  "all one no not with the yeah okay ok like").split(" "));
+
+function openVibe(){
+  show("s-vibe");
+  if (!$("#vibeText").value) $("#vibeText").placeholder = "I barely slept and everything went wrong at work.";
+}
+$("#vibeBack").onclick = () => drawHome();
+
+$("#vibePull").onclick = () => {
+  let last = "";
+  for (const id of Object.keys(S.chats)) {
+    const log = (S.chats[id] && S.chats[id].log) || [];
+    for (let i = log.length - 1; i >= 0; i--) if (log[i].role === "me") { last = log[i].text; break; }
+    if (last) break;
+  }
+  if (!last) { $("#vibeOut").innerHTML = `<p class="vibe-msg">No messages yet. Talk to Buddy first, then come back.</p>`; return; }
+  $("#vibeText").value = last;
+  runVibe();
+};
+
+$("#vibeGo").onclick = runVibe;
+
+async function runVibe(){
+  const text = $("#vibeText").value.trim();
+  const out = $("#vibeOut"), go = $("#vibeGo");
+  if (!text) { out.innerHTML = `<p class="vibe-msg">Type something first.</p>`; return; }
+  go.disabled = true;
+  out.innerHTML = `<p class="vibe-msg">Loading the model on your device…</p>`;
+  try {
+    await vibeReady();
+    const p = await vibePredict(text);
+    if (!p) { out.innerHTML = `<p class="vibe-msg">No readable words in that.</p>`; go.disabled = false; return; }
+    const L = window.VIBE_LABELS;
+    let top = 0; for (let i = 1; i < p.probs.length; i++) if (p.probs[i] > p.probs[top]) top = i;
+
+    const rows = L.map((lab, i) => `
+      <div class="vrow ${i === top ? "win" : ""}">
+        <i>${lab}</i>
+        <div class="vbar"><u style="width:${(p.probs[i]*100).toFixed(1)}%"></u></div>
+        <b>${(p.probs[i]*100).toFixed(1)}%</b>
+      </div>`).join("");
+
+    const second = p.probs.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0])[1];
+    const close = second && (p.probs[top] - second[0]) < 0.15;
+
+    out.innerHTML = `
+      <div class="vibe-top"><b>${L[top]}</b><span>${(p.probs[top]*100).toFixed(1)}% confident${close ? ` · close call with ${L[second[1]]}` : ""}</span></div>
+      ${rows}
+      <div class="vwords" id="vwords"><h4>Working out which words did it…</h4></div>`;
+
+    const attr = await vibeAttribution(p.ids, p.words, top);
+    const strong = attr.filter(([w, wt]) => wt > 0.05 && !VIBE_STOP.has(w) && w.length > 1)
+                       .sort((a,b) => b[1] - a[1]).slice(0, 8);
+    $("#vwords").innerHTML = strong.length
+      ? `<h4>What pushed it to "${L[top]}"</h4>
+         <p>Each word was removed one at a time to see how much the score dropped. Bigger means it mattered more.</p>
+         ${strong.map(([w, wt]) => `<span class="vw">${esc(w)} <b style="opacity:.6">${wt.toFixed(2)}</b></span>`).join("")}`
+      : `<h4>No single word carried it</h4><p>The model read this from the sentence as a whole rather than one strong word.</p>`;
+  } catch (e) {
+    out.innerHTML = `<p class="vibe-msg">Could not load the model. Check your connection and try again.</p>`;
+  }
+  go.disabled = false;
+}
 </script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+<script src="/vibe.js?v=4"></script>
 </body></html>

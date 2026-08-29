@@ -21,9 +21,9 @@ function vibeReady(){
       ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
     }
     const [sess, vocab, meta] = await Promise.all([
-      ort.InferenceSession.create("vibe.onnx?v=3"),
-      fetch("vocab.json?v=3").then(r => r.json()),
-      fetch("meta.json?v=3").then(r => r.json()).catch(() => ({})),
+      ort.InferenceSession.create("/vibe.onnx?v=3"),
+      fetch("/vocab.json?v=3").then(r => r.json()),
+      fetch("/meta.json?v=3").then(r => r.json()).catch(() => ({})),
     ]);
     _sess = sess; _vocab = vocab;
     _maxLen = (meta && meta.max_len) || 64;
@@ -108,3 +108,9 @@ async function analyzeDay(segments){
 
 window.vibeReady = vibeReady;
 window.analyzeDay = analyzeDay;
+// Raw model output, for the Vibe Check tab and for offline benchmarking.
+// analyzeDay post-processes (drops neutral, renormalises), which is right for a
+// daily summary and wrong for measuring the model against a test set.
+window.vibePredict = predict;
+window.vibeAttribution = attribution;
+window.VIBE_LABELS = LABELS;
