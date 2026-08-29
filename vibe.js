@@ -20,10 +20,12 @@ function vibeReady(){
       ort.env.wasm.numThreads = 1;
       ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
     }
+    // Relative paths: the app is served from the root on Cloudflare Pages but
+    // from /buddymini/ on GitHub Pages, and a leading slash breaks the latter.
     const [sess, vocab, meta] = await Promise.all([
-      ort.InferenceSession.create("/vibe.onnx?v=3"),
-      fetch("/vocab.json?v=3").then(r => r.json()),
-      fetch("/meta.json?v=3").then(r => r.json()).catch(() => ({})),
+      ort.InferenceSession.create("vibe.onnx?v=4"),
+      fetch("vocab.json?v=4").then(r => r.json()),
+      fetch("meta.json?v=4").then(r => r.json()).catch(() => ({})),
     ]);
     _sess = sess; _vocab = vocab;
     _maxLen = (meta && meta.max_len) || 64;
