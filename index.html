@@ -787,14 +787,16 @@
 
       <details class="vibe-eval">
         <summary>How good is this model, really?</summary>
-        <p>Measured on 6,590 test examples the model had never seen. A model that ignored the input and always answered "joy" would score 30.3%, so the number below is roughly 2.3× that floor.</p>
+        <p>Two different measurements, because they answer different questions.</p>
         <table>
-          <tr><td>Accuracy</td><td><b>70.7%</b></td></tr>
-          <tr><td>Macro-F1 <i>(all 7 emotions counted equally)</i></td><td><b>68.2%</b></td></tr>
-          <tr><td>Always-guess-"joy" baseline</td><td>30.3%</td></tr>
+          <tr><td><b>On 24 real messages</b> like the ones people send here</td><td><b>42%</b></td></tr>
+          <tr><td>&nbsp;&nbsp;<i>the previous version scored</i></td><td>17%</td></tr>
+          <tr><td><b>On the public tweet benchmark</b> (6,590 unseen)</td><td><b>68.4%</b></td></tr>
+          <tr><td>&nbsp;&nbsp;<i>always guessing "joy" would score</i></td><td>30.3%</td></tr>
         </table>
-        <p>It is not uniform. On short tweets it scores <b>87.9%</b>; on longer Reddit-style comments, <b>63.3%</b>. One average hid a 25-point gap.</p>
-        <p><b>Where it fails:</b> anger and neutral get confused with each other (452 errors), and it chases emotional keywords — when the word "surprise" appears it answers surprise 83% of the time although only 50% of those are really surprise. "My team threw me a surprise party" is joy, and it gets it wrong.</p>
+        <p>The gap between those two numbers is the point. Public benchmarks are short tweets where people <i>state</i> the feeling — "i feel awful". Real messages describe a situation and leave the feeling implied. A model can look good on one and fail the other.</p>
+        <p><b>Where it still fails:</b> it cannot handle a turn. "I like her but she has stopped replying" reads as positive, because it sees the good words and misses that the second half reverses them. It also chases emotion words — the phrase "surprise party" makes it answer surprise when the feeling is joy.</p>
+        <p><b>How it improved:</b> not by getting bigger. Pretraining it ourselves made it worse. What worked was 3,532 training examples describing situations without ever naming the feeling.</p>
         <p class="vibe-links">
           <a href="https://huggingface.co/AakashakaAkku/vibe-check-emotion" target="_blank" rel="noopener">Model card and full evaluation on Hugging Face →</a><br>
           <a href="https://huggingface.co/datasets/dair-ai/emotion" target="_blank" rel="noopener">dair-ai/emotion</a> ·
@@ -1291,5 +1293,5 @@ async function runVibe(){
 }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-<script src="vibe.js?v=4"></script>
+<script src="vibe.js?v=5"></script>
 </body></html>

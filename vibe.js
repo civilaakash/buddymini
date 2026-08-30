@@ -23,9 +23,9 @@ function vibeReady(){
     // Relative paths: the app is served from the root on Cloudflare Pages but
     // from /buddymini/ on GitHub Pages, and a leading slash breaks the latter.
     const [sess, vocab, meta] = await Promise.all([
-      ort.InferenceSession.create("vibe.onnx?v=4"),
-      fetch("vocab.json?v=4").then(r => r.json()),
-      fetch("meta.json?v=4").then(r => r.json()).catch(() => ({})),
+      ort.InferenceSession.create("vibe.onnx?v=5"),
+      fetch("vocab.json?v=5").then(r => r.json()),
+      fetch("meta.json?v=5").then(r => r.json()).catch(() => ({})),
     ]);
     _sess = sess; _vocab = vocab;
     _maxLen = (meta && meta.max_len) || 64;
